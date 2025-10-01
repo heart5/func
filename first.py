@@ -53,9 +53,9 @@ def touchfilepath2depth(filepath: Path) -> Path:
 def getdirmain() -> Path:
     first_path = Path(__file__).parent
     if Path(first_path / ".." / "rootfile").exists():
-        return first_path.parent
+        return first_path.parent.resolve()
     else:
-        return first_path
+        return first_path.resolve()
 
 
 # %% [markdown]
@@ -99,7 +99,6 @@ for p2i in path2include:
 
 # %%
 if __name__ == "__main__":
-    # print(f'开始测试文件\t{__file__}')
     print(f"项目根目录\t{getdirmain()}")
     print(f'当前工作目录\t{os.getcwd()}')
     for dr in sys.path:
