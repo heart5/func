@@ -21,8 +21,11 @@
 import re
 import time
 from datetime import datetime, timedelta
+from types import Union
 
 import arrow
+from tzlocal import get_localzone
+
 # from tzlocal import get_localzone
 # from dateutil import tz
 
@@ -38,22 +41,22 @@ with pathmagic.context():
 # # 功能函数集
 
 # %% [markdown]
-# ## datecn2utc()
+# ## datecn2utc(datestr: str) -> datetime
 
 
 # %%
-def datecn2utc(datestr):
+def datecn2utc(datestr: str) -> datetime:
     # datestr = '2023年9月22日'
     datestr = re.sub("[年月日]", "-", datestr).strip("-")
     return arrow.get(datestr, tzinfo="local").datetime
 
 
 # %% [markdown]
-# ## timestamp2str(timestamp)
+# ## timestamp2str(timestamp: int) -> str
 
 
 # %%
-def timestamp2str(timestamp):
+def timestamp2str(timestamp: int) -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
 
 
@@ -62,14 +65,25 @@ def timestamp2str(timestamp):
 
 
 # %%
-def normalize_timestamp(ts):
+def normalize_timestamp(ts: Union[str, int]) -> Union[datetime, int, str]:
+    # 将时间戳标准化为本地时区的 datetime 对象
     if isinstance(ts, str):
-        # 统一处理带时区的ISO格式和简化格式
         try:
+            # 尝试使用 arrow 解析带有时区的 ISO 格式
             return arrow.get(ts).to(get_localzone()).datetime
-        except:
-            return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
-    return ts
+        except arrow.parser.ParserError:
+            try:
+                # 如果不是 ISO 格式，尝试使用默认格式解析
+                return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                # 如果解析失败，抛出异常
+                raise ValueError("无法解析的时间戳格式")
+    elif isinstance(ts, int):
+        # 处理整数类型的时间戳（假设是秒数）
+        return datetime.fromtimestamp(ts)
+    else:
+        # 如果输入不是字符串或整数，直接返回
+        return ts
 
 
 # %% [markdown]
