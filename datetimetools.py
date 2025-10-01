@@ -87,31 +87,42 @@ def normalize_timestamp(ts: Union[str, int]) -> Union[datetime, int, str]:
 
 
 # %% [markdown]
-# ## getstartdate(period, thedatetime)
+# ## getstartdate(period: str, thedatetime: datetime) -> datetime
 
 
 # %%
-def getstartdate(period, thedatetime):
-    """
-    return date depend on period idicated for certain datetime input
-    period list: ['日', '周', '旬', '月', '年', '全部']
+def getstartdate(period: str, thedatetime: datetime) -> datetime:
+    """根据输入的日期时间返回指定周期的开始日期。
+
+    参数:
+    period (str): 周期标识，可选值为 ['日', '周', '旬', '月', '年', '全部']
+    thedatetime (datetime): 输入的日期时间
+
+    返回:
+    datetime: 指定周期的开始日期
+
+    周期列表:
+    - '日': 返回当天的开始日期
+    - '周': 返回当天所在周的周一的开始日期
+    - '旬': 返回当天所在旬的第一天的开始日期
+    - '月': 返回当天所在月的第一天的开始日期
+    - '年': 返回当天所在年的第一天的开始日期
+    - '全部': 返回输入的日期时间不变
     """
     if period == "日":
-        zuijindatestart = arrow.get(arrow.get(thedatetime).date()).naive
+        zuijindatestart = arrow.get(thedatetime.date()).naive
     elif period == "周":
         weekstarttime = thedatetime - timedelta(days=thedatetime.weekday())  # Monday
-        zuijindatestart = arrow.get(arrow.get(weekstarttime).date()).naive
+        zuijindatestart = arrow.get(weekstarttime.date()).naive
     elif period == "旬":
         # 连用两次三元操作，减缩代码行数
         frtday = 1 if thedatetime.day < 10 else (10 if thedatetime.day < 20 else 20)
-        tmpdt = arrow.get(thedatetime).replace(day=frtday)
+        tmpdt = thedatetime.replace(day=frtday)
         zuijindatestart = arrow.get(tmpdt.date()).naive
     elif period == "月":
-        zuijindatestart = arrow.get(arrow.get(thedatetime).replace(day=1).date()).naive
+        zuijindatestart = arrow.get(thedatetime.replace(day=1).date()).naive
     elif period == "年":
-        zuijindatestart = arrow.get(
-            arrow.get(thedatetime).replace(month=1, day=1).date()
-        ).naive
+        zuijindatestart = arrow.get(thedatetime.replace(month=1, day=1).date()).naive
     else:
         zuijindatestart = thedatetime
 
