@@ -51,7 +51,7 @@ def touchfilepath2depth(filepath: Path) -> Path:
 
 # %%
 def getdirmain() -> Path:
-    first_path = Path(sys.path[0])
+    first_path = Path(__file__).parent
     if Path(first_path / ".." / "rootfile").exists():
         return first_path.parent
     else:
