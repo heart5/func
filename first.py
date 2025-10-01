@@ -28,13 +28,6 @@ from pathlib import Path
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as pltpp
 
-# %%
-import pathmagic
-
-with pathmagic.context():
-    import func.fordirmainonly as fdmo
-
-
 # %% [markdown]
 # ## 函数库
 
@@ -57,12 +50,12 @@ def touchfilepath2depth(filepath: Path) -> Path:
 
 
 # %%
-def getdirmain() -> None:
-    fdmodir = fdmo.__file__
-    dirmainin = os.path.split(fdmodir)[0]
-    dirmaininoutput = os.path.split(dirmainin)[0]
-
-    return Path(dirmaininoutput).resolve()
+def getdirmain() -> Path:
+    first_path = Path(sys.path[0])
+    if Path(first_path / ".." / "rootfile").exists():
+        return first_path.parent
+    else:
+        return first_path
 
 
 # %% [markdown]
@@ -107,7 +100,8 @@ for p2i in path2include:
 # %%
 if __name__ == "__main__":
     # print(f'开始测试文件\t{__file__}')
-    print(getdirmain())
+    print(f"项目根目录\t{getdirmain()}")
+    print(f'当前工作目录\t{os.getcwd()}')
     for dr in sys.path:
         print(dr)
     print("Done.")
