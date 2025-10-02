@@ -45,7 +45,7 @@ import pathmagic
 with pathmagic.context():
     # from func.termuxtools import termux_location, termux_telephony_deviceinfo
     # from func.nettools import ifttt_notify
-    from etc.getid import getdevicename, gethostuser
+    from etc.getid import gethostuser
     from func.configpr import getcfpoptionvalue, setcfpoptionvalue
     from func.first import getdirmain
     from func.logme import log
@@ -207,7 +207,7 @@ def _validate_fields(noteid, fields_str):
 
     # 共享笔记检测逻辑
     if "share_id" in allowed_fields:
-        logging.debug(f"笔记（id：{noteid}）是共享笔记")
+        log.debug(f"笔记（id：{noteid}）是共享笔记")
     return ",".join(allowed_fields)
 
 
@@ -380,12 +380,19 @@ def deleteresourcesfromnote(noteid):
 # %%
 @timethis
 def createnotewithfile(
-    title="Superman", body="Keep focus, man!", parent_id=None, filepath=None
-):
-    """
-    按照传入的参数值构建笔记并返回id
-    """
+    title: str="Superman", body: str="I am the king of the Universe.", parent_id: str=None, filepath: str=None
+) -> str:
+    """创建笔记并附带文件。
 
+    Args:
+        title (str, optional): 笔记标题. Defaults to "Superman".
+        body (str, optional): 笔记正文. Defaults to "I am the king of the Universe.".
+        parent_id (str, optional): 父级笔记id. Defaults to None.
+        filepath (str, optional): 文件路径. Defaults to None.
+
+    Returns:
+        str: 新创建的笔记id.
+    """
     global jpapi
     if filepath:
         note_id = jpapi.add_note(title=title)
@@ -397,17 +404,16 @@ def createnotewithfile(
     else:
         note_id = jpapi.add_note(title=title, body=body)
     if parent_id:
-        jpapi.modify_note(noteid, parent_id=parent_id)
+        jpapi.modify_note(note_id, parent_id=parent_id)
     note = getnote(note_id)
     matches = re.findall(r"\[.*\]\(:.*\/([A-Za-z0-9]{32})\)", note.body)
     if len(matches) > 0:
         log.info(
-            f"笔记《{note.title}》（id：{noteid}）构建成功，包含了资源文件{matches}。"
+            f"笔记《{note.title}》（id：{note_id}）构建成功，包含了资源文件{matches}。"
         )
     else:
-        log.info(f"笔记《{note.title}》（id：{noteid}）构建成功。")
-
-    return noteid
+        log.info(f"笔记《{note.title}》（id：{note_id}）构建成功。")
+    return note_id
 
 
 # %% [markdown]
@@ -510,33 +516,11 @@ def updatenote_imgdata(noteid, parent_id=None, imgdata64=None, imgtitle=None):
 
 
 # %% [markdown]
-# ### test_updatenote_imgdata()
-
-
-# %%
-def test_updatenote_imgdata():
-    global jpapi
-    note_health_lst = searchnotes("健康动态日日升")
-    noteid = note_health_lst[0].id
-    print(noteid)
-    newfilename = os.path.abspath(f"{getdirmain() / 'img' / 'fengye.jpg'}")
-    print(newfilename)
-    image_data = tools.encode_base64(newfilename)
-    # print(image_data)
-    notenew_id, res_id_lst = updatenote_imgdata(
-        noteid=noteid, imgdata64=image_data, imgtitle="QR.png"
-    )
-    print(f"包含新资源文件的新笔记的id为：{notenew_id}")
-    resfile = jpapi.get_resource_file(id_=res_id_lst[0])
-    print(f"资源文件大小（二进制）为：{len(resfile)}字节。")
-
-
-# %% [markdown]
 # ### explore_resource(res_id)
 
 
 # %%
-def explore_resource(res_id):
+def explore_resource(res_id: str) -> None:
     global jpapi
     # fields = ['encryption_blob_encrypted', 'share_id', 'mime', 'updated_time', 'master_key_id', 'is_shared', 'user_updated_time', 'encryption_applied', 'user_created_time', 'size', 'filename', 'file_extension', 'encryption_cipher_text', 'id', 'title', 'created_time']
     # res4test = api.get_resource(res_id, fileds=fields)
@@ -552,10 +536,8 @@ def explore_resource(res_id):
 
 # %%
 @timethis
-def modify_resource(res_id, imgdata64=None):
-    """
-    试图更新data但是无法成功，暂存之
-    """
+def modify_resource(res_id: str, imgdata64: str) -> bytes:
+    """更新资源数据"""
     global jpapi
     res = jpapi.get_resource(res_id)
     log.info(f"id为{res_id}的资源标题为《{res.title}》")
@@ -636,11 +618,8 @@ def searchnotes(key: str, filter: str = "title", parent_id: str = None):
 
 
 # %%
-@set_timeout(180, after_timeout)
-def readinifromcloud():
-    """
-    通过对比更新时间（timestamp）来判断云端配置笔记是否有更新，有更新则更新至本地ini文件，确保数据新鲜
-    """
+def readinifromcloud() -> None:
+    """通过对比更新时间（timestamp）来判断云端配置笔记是否有更新，有更新则更新至本地ini文件，确保数据新鲜"""
     # 在happyjpsys配置文件中查找ini_cloud_updatetimestamp，找不到则表示首次运行，置零
     if not (
         ini_cloud_updatetimestamp := getcfpoptionvalue(
@@ -726,8 +705,8 @@ if __name__ == "__main__":
     # joplinport()
 
     note_ids_to_monitor = [
-        "ed8523d3812143e0943acd9c6cdd3ffe",
-        "9025c19f884c40609bef2133d1a224a1",
+        "f8dd0aabe3984b7889e00898541065df",
+        "634476a1d68443bc8b1ba675e6b648c0",
     ]  # 需要监控的笔记ID列表，替换为实际的GUID
     for note_id in note_ids_to_monitor:
         updated_time = getnote(note_id).updated_time
