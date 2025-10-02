@@ -19,25 +19,30 @@
 
 # %%
 import datetime
-import inspect
+
+# import inspect
 import logging
 import os
 import platform
 import re
 import signal
-import subprocess
-import sys
+
+# import subprocess
+# import sys
 import time
 import traceback
 import uuid
 from collections import deque
 from hashlib import sha256
+from typing import Any, Callable
 
 import matplotlib
 from IPython import get_ipython
 
 # import wmi_client_wrapper as wmi
 from matplotlib.font_manager import FontManager
+
+
 
 # %%
 import pathmagic
@@ -134,34 +139,47 @@ def convertframe2dic(frame):
 
 
 # %%
-def set_timeout(num: int, callback) -> any:
-    """设定运行时间的装饰器"""
+def set_timeout(num: int, callback: Callable[[], None]) -> Callable[..., Any]:
+    """设定运行时间的装饰器。如果函数在指定时间内没有完成，则通过回调函数处理。
+
+    参数:
+    num (int): 函数运行的最大时间（秒）。
+    callback (Callable[[], None]): 当函数超时时调用的回调函数。
+
+    返回:
+    Callable[..., Any]: 包装后的函数，带有超时处理机制。
+    """
 
     def wrap(func):
-        # 收到信号 SIGALRM 后的回调函数，第一个参数是信号的数字，第二个参数是the interrupted stack frame.
-        def handle(signum, frame):
-            raise RuntimeError
+        # 收到信号 SIGALRM 后的回调函数，第一个参数是信号的数字，第二个参数是中断的堆栈帧。
+        def handle(signum: int, frame: Any) -> None:
+            raise RuntimeError("函数执行超时")
 
-        def to_do(*args, **kwargs):
+        def to_do(*args: Any, **kwargs: Any) -> Any:
             try:
+                start_time = time.time()  # 记录开始时间
                 if (sysstr := platform.system()) == "Linux":
-                    #                     print(sysstr)
                     signal.signal(signal.SIGALRM, handle)  # 设置信号和回调函数
                     signal.alarm(num)  # 设置 num 秒的闹钟
                     log.info(f'函数{func.__name__}设置{num}秒的运行时间限制。')
                     r = func(*args, **kwargs)
                     signal.alarm(0)  # 关闭闹钟
-                    log.info(f"函数{func.__name__}运行完毕。")
+                    end_time = time.time()  # 记录结束时间
+                    execution_time = end_time - start_time
+                    log.info(f"函数{func.__name__}运行完毕。执行时长: {time.strftime('%H:%M:%S', time.gmtime(execution_time))}")
                     return r
 
                 else:
                     r = func(*args, **kwargs)
-                    logstr = f"{sysstr}\t非linux系统，啥也没做。"
+                    logstr = f"{sysstr}\t非Linux系统，啥也没做。"
                     log.warning(logstr)
+                    end_time = time.time()  # 记录结束时间
+                    execution_time = end_time - start_time
+                    log.info(f"函数{func.__name__}运行完毕。执行时长: {time.strftime('%H:%M:%S', time.gmtime(execution_time))}")
                     return r
 
             except RuntimeError as e123:
-                logstr = f"{func}出现错误。\t{e123}"
+                logstr = f"{func.__name__}出现错误。\t{e123}"
                 log.warning(logstr)
                 callback()
 
@@ -170,7 +188,6 @@ def set_timeout(num: int, callback) -> any:
     return wrap
 
 
-# %%
 
 # %% [markdown]
 # ### after_timeout()
@@ -213,11 +230,8 @@ def sha2hexstr(inputo: object):
 
 
 # %%
-def is_tool_valid(name):
-    """
-    检查传入的命令是否在系统路径中并且是可执行状态
-    """
-
+def is_tool_valid(name: str) -> bool:
+    """检查传入的命令是否在系统路径中并且是可执行状态"""
     # from whichcraft import which
     from shutil import which
 
@@ -253,11 +267,8 @@ def execcmd(cmd: str) -> str:
 
 
 # %%
-def showfonts():
-    """
-    查询当前系统所有中文字体
-    """
-
+def showfonts() -> None:
+    """查询当前系统所有中文字体"""
     fname = matplotlib.matplotlib_fname()
     print(fname)
     fclistzh = execcmd("fc-list :lang=zh family")
@@ -274,7 +285,7 @@ def showfonts():
 
 
 # %%
-def testdeque():
+def testdeque() -> None:
     myque = deque(maxlen=4)
     msgcontainer = {}
     numstr = ["one", "two", "three", "four", "five", "six", "seven"]
