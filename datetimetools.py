@@ -21,7 +21,7 @@
 import re
 import time
 from datetime import datetime, timedelta
-from types import Union
+from typing import Union
 
 import arrow
 from tzlocal import get_localzone
@@ -61,7 +61,7 @@ def timestamp2str(timestamp: int) -> str:
 
 
 # %% [markdown]
-# ## normalize_timestamp(ts)
+# ## normalize_timestamp(ts: Union[str, int]) -> Union[datetime, int, str]
 
 
 # %%
@@ -130,11 +130,11 @@ def getstartdate(period: str, thedatetime: datetime) -> datetime:
 
 
 # %% [markdown]
-# ## test_getstartdate()
+# ## test_getstartdate() -> None
 
 
 # %%
-def test_getstartdate():
+def test_getstartdate() -> None:
     periodlst = ["日", "周", "旬", "月", "年", "全部"]
     for pr in periodlst:
         tned = getstartdate(pr, datetime.now())
@@ -142,13 +142,16 @@ def test_getstartdate():
 
 
 # %% [markdown]
-# ## gethumantimedelay(inputlocaltime, intervalseconds=120)
+# ### gethumantimedelay(inputlocaltime: str, intervalseconds: int=120) -> Union[str, bool]
 
 
 # %%
-def gethumantimedelay(inputlocaltime, intervalseconds=120):
-    """
-    返回输入时间和当前时间差值的人类可读字符串
+def gethumantimedelay(inputlocaltime: str, intervalseconds: int=120) -> Union[str, bool]:
+    """输入时间和当前时间差值超过120秒（两分钟）时，返回人类可读字符串，否则返回False
+
+    输入参数：
+    inputlocaltime: 输入的本地时间字符串，格式为YYYY-MM-DD HH:mm:ss
+    intervalseconds: 时间差值秒数，默认120秒
     默认对超过120秒（两分钟）的差值有效，否则返回False
     """
     # 默认用当地时间运算
@@ -161,11 +164,11 @@ def gethumantimedelay(inputlocaltime, intervalseconds=120):
 
 
 # %% [markdown]
-# ## test_gethumantimedelay()
+# ## test_gethumantimedelay() -> None
 
 
 # %%
-def test_gethumantimedelay():
+def test_gethumantimedelay() -> None:
     hmtimetestlst = [
         "20210227 01:04:23",
         arrow.get("20210227 02:04:23", tzinfo="local"),
