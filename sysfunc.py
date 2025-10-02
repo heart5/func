@@ -55,37 +55,40 @@ with pathmagic.context():
 # ## 功能函数集
 
 # %% [markdown]
-# ### nooutput2false(output)
+# ### nooutput2false(output: str) -> bool | str
 
 
 # %%
-def nooutput2false(output):
-    if (output is None) or (output == "null") or (len(output) == 0):
+def nooutput2false(output: str) -> bool | str:
+    """Convert output of a command to boolean or string."""
+    if output is None or output == "null" or len(output) == 0:
+        return False
+    elif output == "true":
+        return True
+    elif output == "false":
         return False
     else:
         return output
 
 
 # %% [markdown]
-# ### extract_traceback4exception(tbtuple, func_name, sleeptime=None)
+# ### extract_traceback4exception(tbtuple: tuple, func_name: str, sleeptime : int=None) -> str
 
 
 # %%
-def extract_traceback4exception(tbtuple, func_name, sleeptime=None):
-    """
-    格式化指定异常的详细信息（tuple）并返回（字符串），默认只返回堆栈的首位各两个元素，除非显性指定显示全部
-    """
+def extract_traceback4exception(tbtuple: tuple, func_name: str, sleeptime : int=None) -> str:
+    """格式化指定异常的详细信息（tuple）并返回（字符串），默认只返回堆栈的首位各两个元素，除非显性指定显示全部"""
     # by pass the recyle import, nit recommendded
-    from func.configpr import getcfpoptionvalue
+    from func.jpfuncs import getinivaluefromcloud
 
     # 通sys函数获取eee的相关信息
     eee_type, eee_value, tblst = tbtuple
-    if not (brief := getcfpoptionvalue("everinifromnote", "nettools", "brief")):
+    if not (brief := getinivaluefromcloud("nettools", "brief")):
         brief = False
-    if not (shownums := getcfpoptionvalue("everinifromnote", "nettools", "shownums")):
+    if not (shownums := getinivaluefromcloud("nettools", "shownums")):
         shownums = 3
     if not (
-        alltraceback := getcfpoptionvalue("everinifromnote", "nettools", "tracebackall")
+        alltraceback := getinivaluefromcloud("nettools", "tracebackall")
     ):
         alltraceback = True
     if alltraceback:
@@ -106,29 +109,27 @@ def extract_traceback4exception(tbtuple, func_name, sleeptime=None):
 
 
 # %% [markdown]
-# ### not_IPython()
+# ### not_IPython() -> bool
 
 
 # %%
-def not_IPython():
-    """
-    判断是否在IPython环境下运行
-    """
+def not_IPython() -> bool:  # noqa: N802
+    """判断是否在IPython环境下运行"""
     return get_ipython() is None
 
 
 # %% [markdown]
-# ### convertframe2dict(frame)
+# ### convertframe2dic(frame: any) -> tuple
 
 
 # %%
-def convertframe2dic(frame):
+def convertframe2dic(frame: any) -> tuple:
     framestr = str(frame)
-    filename = re.findall("filename=(.+)\s", framestr)[0].strip()
-    lineno = re.findall("lineno=(.+)\s", framestr)[0].strip()
+    filename = re.findall(r"filename=(.+)\s", framestr)[0].strip()
+    lineno = re.findall(r"lineno=(.+)\s", framestr)[0].strip()
     code_context = [
         line.strip()
-        for line in eval(re.findall("code_context=(.+)\s", framestr)[0].strip())
+        for line in eval(re.findall(r"code_context=(.+)\s", framestr)[0].strip())
     ]
 
     return filename, lineno, code_context
