@@ -14,10 +14,8 @@
 # %% [markdown]
 # # 装饰器功能函数集
 
-# %%
-"""
-装饰器函数集，ift2phone、timethis, logit
-"""
+# %% [markdown]
+# 装饰器函数集：ift2phone、timethis, logit
 
 # %% [markdown]
 # ## 引入重要库
@@ -26,6 +24,7 @@
 import time
 from functools import wraps
 from inspect import signature
+from typing import Callable, Dict
 
 # %%
 import pathmagic
@@ -46,37 +45,29 @@ with pathmagic.context():
 
 
 # %%
-def logit(func):
-    """
-    函数具体调用信息写入日志或print至控制台
-    :param func
-    :return
-    """
+def logit(func: Callable) -> Callable:
+    """函数具体调用信息写入日志或print至控制台"""
+
+    def truncate2show(arg: any) -> any:
+        if isinstance(arg, str) and len(arg) > 50:
+            return arg[:50] + "...(参数超长，显示截断)"
+        elif isinstance(arg, list) and len(arg) > 10:
+            return arg[:10] + ["...(列表超长，显示截断)"]
+        elif isinstance(arg, dict) and len(arg) > 10:
+            truncated_dict = {k: arg[k] for i, k in enumerate(arg) if i < 10}
+            truncated_dict["...(字典超长，显示截断)"] = "..."
+            return truncated_dict
+        return arg
 
     @wraps(func)
-    def with_logging(*args, **kwargs):
-        def truncate(arg):
-            if isinstance(arg, str) and len(arg) > 50:
-                return arg[:50] + "...(参数超长，显示截断)"
-            elif isinstance(arg, list) and len(arg) > 10:
-                return arg[:10] + ["...(列表超长，显示截断)"]
-            elif isinstance(arg, dict) and len(arg) > 10:
-                truncated_dict = {k: arg[k] for i, k in enumerate(arg) if i < 10}
-                truncated_dict["...(字典超长，显示截断)"] = "..."
-                return truncated_dict
-            return arg
-
-        args4show = [truncate(x) for x in args]
-        kwargs4show = {k: truncate(v) for k, v in kwargs.items()}
+    def with_logging(*args: any, **kwargs: Dict[str, any]) -> Callable:
+        """日志记录器"""
+        args4show = [truncate2show(x) for x in args]
+        kwargs4show = {k: truncate2show(v) for k, v in kwargs.items()}
         if not_IPython():
-            log.info(
-                f"{func.__name__}函数被调用，参数列表：{args4show}, 关键字参数：{kwargs4show}"
-            )
+            log.info(f"{func.__name__}函数被调用，参数列表：{args4show}, 关键字参数：{kwargs4show}")
         else:
-            print(
-                f"{func.__name__}函数被调用，参数列表：{args4show}, 关键字参数：{kwargs4show}"
-            )
-
+            print(f"{func.__name__}函数被调用，参数列表：{args4show}, 关键字参数：{kwargs4show}")
         return func(*args, **kwargs)
 
     return with_logging
@@ -87,16 +78,19 @@ def logit(func):
 
 
 # %%
-def ift2phone(msg=None):
-    """
-    目标函数运行时将信息通过ifttt发送至手机
-    :param msg:
-    :return:
+def ift2phone(msg: str|None =None) -> Callable:
+    """装饰器，在目标函数运行时将信息通过ifttt发送至手机
+
+    Args:
+        msg (str, optional): 发送的消息. Defaults to None.
+
+    Returns:
+        decorator: 装饰器
     """
 
-    def decorate(func):
+    def decorate(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: any, **kwargs: any) -> any:
             result = func(*args, **kwargs)
             if msg is None:
                 msginner = func.__doc__
@@ -115,16 +109,19 @@ def ift2phone(msg=None):
 
 
 # %%
-def timethis(func):
-    """
-    装饰执行时间（tida）
-    :param func:
-    :return:
+def timethis(func: Callable) -> Callable:
+    """装饰执行时间（tida）
+
+    Args:
+        func: 被装饰的函数
+
+    Returns:
+        wrapper: 装饰后的函数
     """
 
     @logit
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: any, **kwargs: Dict[str, any]) -> any:
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
@@ -152,19 +149,26 @@ def timethis(func):
 # %%
 @timethis
 @ift2phone("倒数计时器")
-@ift2phone()
 # @lpt_wrapper()
-def countdown(n: int):
-    """
-    倒计时
-    :param n:
-    :return: NULL
+def countdown(n: int) -> None:
+    """倒计时功能，输入倒计时时间，程序会在指定时间后打印倒计时数字。
+
+    Args: 倒计时数值n
+
+    Returns: None
+
+    Example:
+    ```python
+    countdown(10)
+    ```
     """
     print(n)
     while n > 0:
         n -= 1
         if (n % 5000) == 0:
             print(n)
+        # time.sleep(1)
+    print("时间到！")
 
 
 # %% [markdown]
