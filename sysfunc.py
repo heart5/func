@@ -34,7 +34,7 @@ import traceback
 import uuid
 from collections import deque
 from hashlib import sha256
-from typing import Any, Callable
+from typing import Callable
 
 import matplotlib
 from IPython import get_ipython
@@ -140,7 +140,7 @@ def convertframe2dic(frame: any) -> tuple:
 
 
 # %%
-def set_timeout(num: int, callback: Callable[[], None]) -> Callable[..., Any]:
+def set_timeout(num: int, callback: Callable[[], None]) -> Callable[..., any]:
     """设定运行时间的装饰器。如果函数在指定时间内没有完成，则通过回调函数处理。
 
     参数:
@@ -151,12 +151,12 @@ def set_timeout(num: int, callback: Callable[[], None]) -> Callable[..., Any]:
     Callable[..., Any]: 包装后的函数，带有超时处理机制。
     """
 
-    def wrap(func):
-        # 收到信号 SIGALRM 后的回调函数，第一个参数是信号的数字，第二个参数是中断的堆栈帧。
-        def handle(signum: int, frame: Any) -> None:
+    def wrap(func: Callable[..., any]) -> any:
+        def handle(signum: int, frame: any) -> None:
+            # 收到信号 SIGALRM 后的回调函数，第一个参数是信号的数字，第二个参数是中断的堆栈帧。
             raise RuntimeError("函数执行超时")
 
-        def to_do(*args: Any, **kwargs: Any) -> Any:
+        def to_do(*args: any, **kwargs: any) -> any:
             try:
                 start_time = time.time()  # 记录开始时间
                 if (sysstr := platform.system()) == "Linux":
@@ -205,7 +205,8 @@ def after_timeout() -> None:
 
 
 # %%
-def uuid3hexstr(inputo: object):
+def uuid3hexstr(inputo: str) -> str:
+    """Generate a UUID3 hex string from a given input string."""
     inputstr = str(inputo)
 
     return hex(hash(uuid.uuid3(uuid.NAMESPACE_URL, inputstr)))[2:].upper()
@@ -216,8 +217,9 @@ def uuid3hexstr(inputo: object):
 
 
 # %%
-def sha2hexstr(inputo: object):
-    if type(inputo) == bytes:
+def sha2hexstr(inputo: any) -> str:
+    """Convert input to SHA256 hex string"""
+    if type(inputo) is bytes:
         targetb = inputo
     else:
         targetb = str(inputo).encode("utf-8")
@@ -321,7 +323,7 @@ def testdeque() -> None:
 
 
 # %%
-def listallloghander():
+def listallloghander() -> None:
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
     # print(all_loggers.get('hjer'))
