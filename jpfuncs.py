@@ -49,8 +49,11 @@ with pathmagic.context():
     from func.configpr import getcfpoptionvalue, setcfpoptionvalue
     from func.first import getdirmain
     from func.logme import log
-    from func.sysfunc import after_timeout, execcmd, not_IPython, set_timeout
+
+    # from func.sysfunc import after_timeout, execcmd, not_IPython, set_timeout
+    from func.sysfunc import execcmd, not_IPython
     from func.wrapfuncs import timethis
+
 
 
 # %% [markdown]
@@ -62,10 +65,8 @@ with pathmagic.context():
 
 # %%
 @timethis
-def getapi():
-    """
-    获取api方便调用，自适应不同的joplin server端口；通过命令行joplin获取相关配置参数值
-    """
+def getapi() -> ClientApi:
+    """获取api方便调用，自适应不同的joplin server端口；通过命令行joplin获取相关配置参数值"""
     # 一次运行两个命令，减少一次命令行调用
     jpcmdstr = execcmd("joplin config api.token&joplin config api.port")
     if jpcmdstr.find("=") == -1:
@@ -99,10 +100,8 @@ def getapi():
 
 # %%
 @timethis
-def searchnotebook(title):
-    """
-    查找指定title（全名）的笔记本并返回id，如果不存在，则新建一个返回id
-    """
+def searchnotebook(title: str) -> str:
+    """查找指定title（全名）的笔记本并返回id，如果不存在，则新建一个返回id"""
     global jpapi
     result = jpapi.search(query=title, type="folder")
     if len(result.items) == 0:
@@ -120,10 +119,9 @@ def searchnotebook(title):
 
 # %%
 def getallnotes():
-    """
-    获取所有笔记；默认仅输出id、parent_id和title三项有效信息
-    """
+    """获取所有笔记；默认仅输出id、parent_id和title三项有效信息"""
     global jpapi
+    jpapi.get_all_notes()
 
     return jpapi.get_all_notes()
 
@@ -133,7 +131,7 @@ def getallnotes():
 
 
 # %%
-def getnoteswithfields(fields, limit=10):
+def getnoteswithfields(fields: str, limit: int=10) -> None:
     global jpapi
     fields_ls = fields.split(",")
     allnotes = [note for note in jpapi.get_all_notes(fields=fields)[:limit]]
@@ -157,12 +155,15 @@ def getnoteswithfields(fields, limit=10):
 
 
 # %%
-def getnote(noteid, full_analysis=False):
-    """
-    通过id获取笔记内容，默认只获取基础字段，可选全字段分析
-    :param noteid: 笔记ID
-    :param full_analysis: 是否进行全字段分析（默认False）
-    :return: NoteData对象
+def getnote(noteid: str, full_analysis: bool=False):
+    """通过id获取笔记内容，默认只获取基础字段，可选全字段分析
+
+    Args:
+        noteid (str): 笔记id
+        full_analysis (bool, optional): 是否进行全字段分析. Defaults to False.
+
+    Returns:
+        dict: 笔记内容
     """
     # 基础字段（parent_id到source_url）
     base_fields = "parent_id, title, body, created_time, updated_time, is_conflict, latitude, longitude, altitude, author, source_url"
@@ -188,7 +189,7 @@ def getnote(noteid, full_analysis=False):
 
 
 # %%
-def _validate_fields(noteid, fields_str):
+def _validate_fields(noteid: str, fields_str: str) -> str:
     """检查字段可用性并返回有效字段列表"""
     flst = [f.strip() for f in fields_str.split(",")]
     allowed_fields = []
@@ -216,7 +217,7 @@ def _validate_fields(noteid, fields_str):
 
 
 # %%
-def noteid_used(targetid):
+def noteid_used(targetid: str) -> bool:
     try:
         getnote(targetid)
         return True
@@ -230,7 +231,7 @@ def noteid_used(targetid):
 
 
 # %%
-def resid_used(targetid):
+def resid_used(targetid: str) -> bool:
     global jpapi
     try:
         res = jpapi.get_resource(id_=targetid)
@@ -247,12 +248,9 @@ def resid_used(targetid):
 # %%
 @timethis
 def createnote(
-    title="Superman", body="Keep focus, man!", parent_id=None, imgdata64=None
-):
-    """
-    按照传入的参数值构建笔记并返回id
-    """
-
+    title: str="Superman", body: str="Keep focus, man!", parent_id: str=None, imgdata64: str=None
+) -> str:
+    """按照传入的参数值构建笔记并返回id"""
     global jpapi
     if imgdata64:
         noteid = jpapi.add_note(
@@ -462,9 +460,7 @@ def updatenote_body(noteid, bodystr, parent_id=None):
 # %%
 @timethis
 def updatenote_imgdata(noteid, parent_id=None, imgdata64=None, imgtitle=None):
-    """
-    用构新去旧的方式更新包含资源的笔记，返回新建笔记的id和资源id列表
-    """
+    """用构新去旧的方式更新包含资源的笔记，返回新建笔记的id和资源id列表"""
     global jpapi
     note = getnote(noteid)
     origin_body = note.body
@@ -572,9 +568,7 @@ def modify_resource(res_id: str, imgdata64: str) -> bytes:
 
 # %%
 def getreslst(noteid):
-    """
-    以字典列表的形式返回输入id笔记包含的资源文件，包含id、title和contentb
-    """
+    """以字典列表的形式返回输入id笔记包含的资源文件，包含id、title和contentb"""
     global jpapi
     dLst = jpapi.get_resources(note_id=noteid)
     # print(type(dLst), dLst)
@@ -596,9 +590,7 @@ def getreslst(noteid):
 # %%
 @timethis
 def searchnotes(key: str, filter: str = "title", parent_id: str = None):
-    """
-    传入关键字搜索并返回笔记列表，每个笔记中包含了所有可能提取field值
-    """
+    """传入关键字搜索并返回笔记列表，每个笔记中包含了所有可能提取field值"""
     global jpapi
     # 经过测试，fields中不能携带的属性值有：latitude, longitude, altitude, master_key_id, body_html,  image_data_url, crop_rect，另外shared_id对于共享笔记本下的笔记无法查询，出错
     fields = "id, parent_id, title, body, created_time, updated_time, is_conflict, author, source_url, is_todo, todo_due, todo_completed, source, source_application, application_data, order, user_created_time, user_updated_time, encryption_cipher_text, encryption_applied, markup_language, is_shared, conflict_original_id"
