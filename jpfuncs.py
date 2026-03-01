@@ -18,6 +18,7 @@
 # ## 引入库
 
 # %%
+import base64
 import hashlib
 import os
 import re
@@ -54,8 +55,6 @@ with pathmagic.context():
     from func.sysfunc import execcmd, not_IPython
     from func.wrapfuncs import timethis
 
-
-
 # %% [markdown]
 # ## 功能函数集
 
@@ -77,12 +76,7 @@ def getapi() -> ClientApi:
     # 简化api.token为token，port类似，同时把默认的port替换为41184
     kvdict = dict(
         [
-            [
-                x.split(".")[-1].strip()
-                if x.split(".")[-1].strip() != "null"
-                else 41184
-                for x in sonlst
-            ]
+            [x.split(".")[-1].strip() if x.split(".")[-1].strip() != "null" else 41184 for x in sonlst]
             for sonlst in splitlst
         ]
     )
@@ -131,7 +125,7 @@ def getallnotes():
 
 
 # %%
-def getnoteswithfields(fields: str, limit: int=10) -> None:
+def getnoteswithfields(fields: str, limit: int = 10) -> None:
     global jpapi
     fields_ls = fields.split(",")
     allnotes = [note for note in jpapi.get_all_notes(fields=fields)[:limit]]
@@ -155,7 +149,7 @@ def getnoteswithfields(fields: str, limit: int=10) -> None:
 
 
 # %%
-def getnote(noteid: str, full_analysis: bool=False):
+def getnote(noteid: str, full_analysis: bool = False):
     """通过id获取笔记内容，默认只获取基础字段，可选全字段分析
 
     Args:
@@ -247,28 +241,46 @@ def resid_used(targetid: str) -> bool:
 
 # %%
 @timethis
-def createnote(
-    title: str="Superman", body: str="Keep focus, man!", parent_id: str=None, imgdata64: str=None
-) -> str:
-    """按照传入的参数值构建笔记并返回id"""
+def createnote(title="Superman", body="Keep focus, man!", parent_id=None, imgdata64=None):
+    """创建笔记，支持直接添加图片资源"""
     global jpapi
+
+    # 如果有图片数据，先创建资源
+    resource_ids = []
     if imgdata64:
-        noteid = jpapi.add_note(
-            title=title, image_data_url=f"data:image/png;base64,{imgdata64}"
-        )
-        jpapi.modify_note(noteid, body=f"{getnote(noteid).body}\n{body}")
-    else:
-        noteid = jpapi.add_note(title=title, body=body)
+        try:
+            # 将base64转换为字节
+            if imgdata64.startswith("data:image/"):
+                imgdata64 = imgdata64.split(",", 1)[1] if "," in imgdata64 else imgdata64
+
+            image_bytes = base64.b64decode(imgdata64)
+            res_id = add_resource_from_bytes(data_bytes=image_bytes, title=f"{title}_image", mime_type="image/png")
+            resource_ids.append(res_id)
+
+            # 在body中添加资源引用
+            body = f"{body}\n\n![{title}](:/{res_id})" if body else f"![{title}](:/{res_id})"
+
+        except Exception as e:
+            log.error(f"创建图片资源失败：{str(e)}")
+            # 继续创建笔记，但不包含图片
+
+    # 创建笔记
+    noteid = jpapi.add_note(title=title, body=body)
+
+    # 设置父目录
     if parent_id:
         jpapi.modify_note(noteid, parent_id=parent_id)
-    note = getnote(noteid)
-    matches = re.findall(r"\[.*\]\(:.*\/([A-Za-z0-9]{32})\)", note.body)
-    if len(matches) > 0:
-        log.info(
-            f"笔记《{note.title}》（id：{noteid}）构建成功，包含了资源文件{matches}。"
-        )
-    else:
-        log.info(f"笔记《{note.title}》（id：{noteid}）构建成功。")
+
+    # 将资源关联到笔记
+    for res_id in resource_ids:
+        try:
+            jpapi.add_resource_to_note(resource_id=res_id, note_id=noteid)
+        except Exception as e:
+            log.warning(f"关联资源 {res_id} 到笔记失败：{str(e)}")
+
+    log.info(
+        f"笔记《{title}》（id：{noteid}）创建成功" + (f"，包含 {len(resource_ids)} 个资源文件" if resource_ids else "")
+    )
 
     return noteid
 
@@ -323,9 +335,7 @@ def createresourcefromobj(file_obj, title=None):
             # 使用临时文件的路径调用 add_resource
             # 使用文件描述符重定向
             res_id = jpapi.add_resource(filename=tmpfile_path, title=title)
-            log.info(
-                f"资源文件《{title}》从file_obj创建成功，纳入笔记资源系统管理，可以正常被调用！"
-            )
+            log.info(f"资源文件《{title}》从file_obj创建成功，纳入笔记资源系统管理，可以正常被调用！")
         except Exception as e:
             log.error(f"资源上传失败: {str(e)}")
             raise
@@ -354,9 +364,7 @@ def add_resource_from_bytes(data_bytes, title, mime_type="image/png"):
 
 # %%
 def deleteresourcesfromnote(noteid):
-    """
-    遍历笔记中包含的资源文件并删除之！
-    """
+    """遍历笔记中包含的资源文件并删除之！"""
     global jpapi
     note = getnote(noteid)
     ptn = re.compile(r"\(:/(\w+)\)")
@@ -372,13 +380,139 @@ def deleteresourcesfromnote(noteid):
 
 
 # %% [markdown]
-# ### createnotewithfile(title="Superman", body="Keep focus, man!", parent_id=None, filepath=None)
+#
+
+# %% [markdown]
+# ### extract_resource_ids_from_note(noteid)
+
+# %%
+def extract_resource_ids_from_note(noteid):
+    """提取笔记中的所有资源ID"""
+    note = getnote(noteid)
+    if not note.body:
+        return []
+
+    pattern = re.compile(r"\(:/([a-fA-F0-9]{32})\)")
+    return pattern.findall(note.body)
+
+
+# %% [markdown]
+# ### replace_note_resources(noteid, new_resource_ids, keep_text=True)
+
+# %%
+def replace_note_resources(noteid, new_resource_ids, keep_text=True):
+    """替换笔记中的资源引用
+    :param noteid: 笔记ID
+    :param new_resource_ids: 新资源ID列表
+    :param keep_text: 是否保留原文本内容
+    :return: 更新后的笔记ID
+    """
+    note = getnote(noteid)
+
+    # 构建新body
+    new_body_lines = []
+
+    if keep_text and note.body:
+        # 保留非资源引用的文本行
+        lines = note.body.split("\n")
+        resource_pattern = re.compile(r"\(:/([a-fA-F0-9]{32})\)")
+        for line in lines:
+            if not resource_pattern.search(line):
+                new_body_lines.append(line)
+
+    # 添加新资源引用
+    for res_id in new_resource_ids:
+        try:
+            res_info = jpapi.get_resource(res_id)
+            new_body_lines.append(f"![{res_info.title}](:/{res_id})")
+        except:
+            new_body_lines.append(f"![资源](:/{res_id})")
+
+    new_body = "\n".join(new_body_lines)
+
+    # 更新笔记
+    if new_body != note.body:
+        jpapi.modify_note(noteid, body=new_body)
+        log.info(f"笔记《{note.title}》资源引用已更新")
+
+    return noteid
+
+
+# %% [markdown]
+# ### update_note_resources_batch(noteid, resource_updates)
+
+# %%
+def update_note_resources_batch(noteid, resource_updates):
+    """批量更新笔记中的多个资源
+    :param noteid: 笔记ID
+    :param resource_updates: 字典列表，每个字典包含：
+        - old_res_id: 旧资源ID（可选）
+        - new_imgdata64: 新图片base64数据
+        - title: 资源标题
+    :return: (noteid, new_resource_ids)
+    """
+    note = getnote(noteid)
+    old_resource_ids = extract_resource_ids_from_note(noteid)
+
+    # 删除所有旧资源
+    for res_id in old_resource_ids:
+        try:
+            jpapi.delete_resource(res_id)
+            log.info(f"删除旧资源：{res_id}")
+        except Exception as e:
+            log.warning(f"删除资源 {res_id} 失败：{str(e)}")
+
+    # 创建新资源
+    new_resource_ids = []
+    for update in resource_updates:
+        try:
+            imgdata64 = update.get("new_imgdata64")
+            title = update.get("title", f"resource_{arrow.now().format('YYYYMMDD_HHmmss')}")
+
+            if imgdata64:
+                # 解码base64
+                if imgdata64.startswith("data:image/"):
+                    imgdata64 = imgdata64.split(",", 1)[1] if "," in imgdata64 else imgdata64
+
+                image_bytes = base64.b64decode(imgdata64)
+                new_res_id = add_resource_from_bytes(image_bytes, title)
+                new_resource_ids.append(new_res_id)
+                log.info(f"创建新资源《{title}》：{new_res_id}")
+        except Exception as e:
+            log.error(f"处理资源更新失败：{str(e)}")
+
+    # 更新笔记body
+    new_body_lines = []
+
+    # 保留原文本内容
+    if note.body:
+        lines = note.body.split("\n")
+        resource_pattern = re.compile(r"\(:/([a-fA-F0-9]{32})\)")
+        for line in lines:
+            if not resource_pattern.search(line):
+                new_body_lines.append(line)
+
+    # 添加新资源引用
+    for res_id in new_resource_ids:
+        try:
+            res_info = jpapi.get_resource(res_id)
+            new_body_lines.append(f"![{res_info.title}](:/{res_id})")
+        except:
+            new_body_lines.append(f"![资源](:/{res_id})")
+
+    new_body = "\n".join(new_body_lines)
+    jpapi.modify_note(noteid, body=new_body)
+
+    return noteid, new_resource_ids
+
+# %% [markdown]
+# ### createnotewithfile(title: str = "Superman", body: str = "I am the king of the Universe.", parent_id: str = None, filepath: str = None) -> str
 
 
 # %%
 @timethis
 def createnotewithfile(
-    title: str="Superman", body: str="I am the king of the Universe.", parent_id: str=None, filepath: str=None
+    title: str = "Superman", body: str = "I am the king of the Universe.", parent_id: str = None, filepath: str = None
 ) -> str:
     """创建笔记并附带文件。
 
@@ -394,9 +528,7 @@ def createnotewithfile(
     global jpapi
     if filepath:
         note_id = jpapi.add_note(title=title)
-        resource_id = jpapi.add_resource(
-            filename=filepath, title=filepath.split("/")[-1]
-        )
+        resource_id = jpapi.add_resource(filename=filepath, title=filepath.split("/")[-1])
         jpapi.add_resource_to_note(resource_id=resource_id, note_id=note_id)
         jpapi.modify_note(note_id, body=f"{jpapi.get_note(note_id).body}\n{body}")
     else:
@@ -406,9 +538,7 @@ def createnotewithfile(
     note = getnote(note_id)
     matches = re.findall(r"\[.*\]\(:.*\/([A-Za-z0-9]{32})\)", note.body)
     if len(matches) > 0:
-        log.info(
-            f"笔记《{note.title}》（id：{note_id}）构建成功，包含了资源文件{matches}。"
-        )
+        log.info(f"笔记《{note.title}》（id：{note_id}）构建成功，包含了资源文件{matches}。")
     else:
         log.info(f"笔记《{note.title}》（id：{note_id}）构建成功。")
     return note_id
@@ -454,61 +584,77 @@ def updatenote_body(noteid, bodystr, parent_id=None):
 
 
 # %% [markdown]
-# ### updatenote_imgdata(noteid, imgdata64, parent_id=None, imgtitle=None)
+# ### updatenote_imgdata(noteid, imgdata64, parent_id=None, imgtitle=None, keep_text=False)
 
 
 # %%
 @timethis
-def updatenote_imgdata(noteid, parent_id=None, imgdata64=None, imgtitle=None):
-    """用构新去旧的方式更新包含资源的笔记，返回新建笔记的id和资源id列表"""
+def updatenote_imgdata(noteid, parent_id=None, imgdata64=None, imgtitle=None, keep_text=False):
+    """优化版：直接更新笔记中的图片资源，不创建新笔记
+    1. 删除笔记中所有现有资源
+    2. 创建新资源并添加到笔记
+    3. 更新笔记body内容
+    4. 可选更新父目录
+    """
     global jpapi
+
+    # 1. 获取原笔记信息
     note = getnote(noteid)
-    origin_body = note.body
-    if (origin_body is None) or (len(origin_body) == 0):
-        log.critical(
-            f"笔记《{note.title}》（id：{noteid}）的内容为空，没有包含待更新的资源文件信息。"
-        )
-        return
-    print(f"笔记《{note.title}》（id：{noteid}）的内容为：\t{origin_body}")
+    log.info(f"开始更新笔记《{note.title}》（id：{noteid}）中的图片资源")
 
-    matches = re.findall(r"\[.*\]\(:.*\/([A-Za-z0-9]{32})\)", origin_body)
-    for resid in matches:
-        if resid_used(resid):
-            jpapi.delete_resource(resid)
-            log.critical(f"资源文件（id：{resid}）成功删除。")
-        else:
-            log.critical(f"资源文件（id：{resid}）不存在，无法删除，跳过。")
-    jpapi.delete_note(noteid)
-    log.info(
-        f"笔记《{note.title}》（id：{noteid}）中的资源文件{matches}和该笔记都已从笔记系统中删除！"
-    )
+    # 2. 删除所有现有资源
+    deleteresourcesfromnote(noteid)
 
-    # notenew_id = api.add_note(title=note.title, image_data_url=f"data:image/png;base64,{imgdata64}")
-    if parent_id:
-        notenew_id = createnote(
-            title=note.title, imgdata64=imgdata64, parent_id=parent_id
-        )
+    # 3. 创建新资源（如果有新图片数据）
+    new_resource_ids = []
+    if imgdata64:
+        # 生成资源标题
+        if not imgtitle:
+            imgtitle = f"updated_image_{arrow.now().format('YYYY-MM-DD_HH-mm-ss')}"
+
+        # 将base64转换为字节数据
+        try:
+            # 移除base64前缀（如果有）
+            if imgdata64.startswith("data:image/"):
+                # 提取纯base64部分
+                imgdata64 = imgdata64.split(",", 1)[1] if "," in imgdata64 else imgdata64
+
+            image_bytes = base64.b64decode(imgdata64)
+
+            # 使用现有的 add_resource_from_bytes 函数
+            new_res_id = add_resource_from_bytes(
+                data_bytes=image_bytes,
+                title=imgtitle,
+                mime_type="image/png",  # 默认PNG，可根据需要调整
+            )
+            new_resource_ids.append(new_res_id)
+            log.info(f"创建新资源《{imgtitle}》（id：{new_res_id}）")
+
+        except Exception as e:
+            log.error(f"创建新资源失败：{str(e)}")
+            raise
+
+    # 4. 批量更新新资源到笔记
+    noteid = replace_note_resources(noteid, new_resource_ids, keep_text=keep_text)
+
+    # 5. 更新父目录（如果需要）
+    update_data = {}
+
+    if parent_id and parent_id != note.parent_id:
+        update_data["parent_id"] = parent_id
+        old_notebook = jpapi.get_notebook(note.parent_id).title if note.parent_id else "根目录"
+        new_notebook = jpapi.get_notebook(parent_id).title
+        log.critical(f"笔记《{note.title}》从笔记本《{old_notebook}》调整到《{new_notebook}》")
+
+    # 执行更新
+    if update_data:
+        jpapi.modify_note(noteid, **update_data)
+        log.info(f"笔记《{note.title}》更新完成")
     else:
-        notenew_id = createnote(title=note.title, imgdata64=imgdata64)
-    if parent_id != note.parent_id:
-        jpapi.modify_note(notenew_id, parent_id=parent_id)
-        nb_title = jpapi.get_notebook(parent_id).title
-        nb_old_title = jpapi.get_notebook(note.parent_id).title
-        log.critical(
-            f"笔记《{note.title}》从笔记本《{nb_old_title}》调整到《{nb_title}》中！"
-        )
-    notenew = getnote(notenew_id)
-    matchesnew = re.findall(r"\[.*\]\(:.*\/([A-Za-z0-9]{32})\)", notenew.body)
-    res_id_lst = matchesnew
-    if not imgtitle:
-        imgtitle = f"happyjoplin {arrow.now()}"
-    jpapi.modify_resource(id_=res_id_lst[0], title=f"{imgtitle}")
-    log.info(
-        f"构建新的笔记《{note.title}》（id：{notenew_id}）成功，并且构建了新的资源文件{matchesnew}进入笔记系统。"
-    )
-    print(f"笔记《{notenew.title}》（id：{notenew_id}）的内容为：\t{notenew.body}")
+        log.info(f"笔记《{note.title}》无需更新")
 
-    return notenew_id, res_id_lst
+    # 6. 返回结果
+    return noteid, new_resource_ids
 
 
 # %% [markdown]
@@ -613,20 +759,12 @@ def searchnotes(key: str, filter: str = "title", parent_id: str = None):
 def readinifromcloud() -> None:
     """通过对比更新时间（timestamp）来判断云端配置笔记是否有更新，有更新则更新至本地ini文件，确保数据新鲜"""
     # 在happyjpsys配置文件中查找ini_cloud_updatetimestamp，找不到则表示首次运行，置零
-    if not (
-        ini_cloud_updatetimestamp := getcfpoptionvalue(
-            "happyjpsys", "joplin", "ini_cloud_updatetimestamp"
-        )
-    ):
+    if not (ini_cloud_updatetimestamp := getcfpoptionvalue("happyjpsys", "joplin", "ini_cloud_updatetimestamp")):
         ini_cloud_updatetimestamp = 0
 
     # 在happyjp配置文件中查找ini_cloud_id，找不到则在云端搜索，搜不到就新建一个，无论是找到了还是新建一个，在happyjp中相应赋值
-    if (
-        noteid_inifromcloud := getcfpoptionvalue("happyjp", "joplin", "ini_cloud_id")
-    ) is None:
-        if (resultitems := searchnotes("happyjoplin云端配置")) and (
-            len(resultitems) > 0
-        ):
+    if (noteid_inifromcloud := getcfpoptionvalue("happyjp", "joplin", "ini_cloud_id")) is None:
+        if (resultitems := searchnotes("happyjoplin云端配置")) and (len(resultitems) > 0):
             noteid_inifromcloud = resultitems[0].id
         else:
             noteid_inifromcloud = createnote("happyjoplin云端配置", "")
@@ -642,9 +780,7 @@ def readinifromcloud() -> None:
 
     items = note.body.split("\n")
     # print(items)
-    fileobj = open(
-        str(getdirmain() / "data" / "happyjpinifromcloud.ini"), "w", encoding="utf-8"
-    )
+    fileobj = open(str(getdirmain() / "data" / "happyjpinifromcloud.ini"), "w", encoding="utf-8")
     for item in items:
         fileobj.write(item + "\n")
     fileobj.close()
