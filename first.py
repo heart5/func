@@ -59,22 +59,6 @@ def getdirmain() -> Path:
 
 
 # %% [markdown]
-# ## 显性指定中文字体并配置matplotlib
-
-# %%
-# 添加字体路径（容器内路径）
-font_path = "/usr/share/fonts/simhei.ttf"  # 指定具体字体文件
-# 判断路径为了兼容其它能正常识别中文字体路径的环境，比如手机上的termux
-if Path(font_path).exists():
-    fm.fontManager.addfont(font_path)
-    print(f"中文字体路径{font_path}存在")
-
-# 配置全局字体
-pltpp.rcParams['font.family'] = 'sans-serif'
-pltpp.rcParams['font.sans-serif'] = ['SimHei']  # 使用字体Family名
-pltpp.rcParams['axes.unicode_minus'] = False    # 解决负号显示问题
-
-# %% [markdown]
 # ## 定义全局变量
 
 # %%
@@ -100,7 +84,7 @@ for p2i in path2include:
 # %%
 if __name__ == "__main__":
     print(f"项目根目录\t{getdirmain()}")
-    print(f'当前工作目录\t{os.getcwd()}')
+    print(f"当前工作目录\t{os.getcwd()}")
     for dr in sys.path:
         print(dr)
     print("Done.")
