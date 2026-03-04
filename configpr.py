@@ -121,9 +121,7 @@ def getcfp(cfpfilename: str) -> Tuple[ConfigParser, Path]:
     try:
         cfpson.read(inipathson, encoding="utf-8")
     except (DuplicateSectionError, DuplicateOptionError) as dse:
-        log.critical(
-            f"ini文件《{inipathson}》中存在重复的section或option名称，备份文件并试图修复文件……{dse}"
-        )
+        log.critical(f"ini文件《{inipathson}》中存在重复的section或option名称，备份文件并试图修复文件……{dse}")
         fixinifile(inipathson)
     except Exception as eee:
         log.critical(eee)
@@ -205,12 +203,27 @@ def getcfpoptionvalue(cfpfilename: str, sectionname: str, optionname: str) -> An
 
 
 # %% [markdown]
+# ### findvaluebykeyinsection(cfpname, optionname, value)
+
+# %%
+def findvaluebykeyinsection(cfpname, optionname, value):
+    """通过value反查key"""
+    cfp, cfppath = getcfp(cfpname)
+    for option in cfp.options(optionname):
+        findvalue = cfp.get(optionname, option)
+        if findvalue == value:
+            print(f"在【{optionname}】中找到value为{value}的键值对，key为{option}")
+            return option
+
+
+# %% [markdown]
 # ## 主函数main()
 
 # %%
 if __name__ == "__main__":
     from jpfuncs import getinivaluefromcloud
-    is_log_details = getinivaluefromcloud('happyjoplin', 'is_log_details')
+
+    is_log_details = getinivaluefromcloud("happyjoplin", "is_log_details")
     if not_IPython() and is_log_details:
         print(f"开始测试文件\t{__file__}")
     cfpapiname = "happyjp"
