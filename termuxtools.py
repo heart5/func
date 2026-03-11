@@ -41,11 +41,9 @@ with pathmagic.context():
 # %% [markdown]
 # ## 功能函数集合
 
-# %%
-"""
-    implementation of all the termux-api commands
-    via subprocesses,
-"""
+# %% [markdown]
+# implementation of all the termux-api commands
+#     via subprocesses,
 
 # %% [markdown]
 # ### evaloutput(output: Union[str, bool, None]) -> Union[Dict, bool, str]
@@ -385,9 +383,7 @@ def termux_share():
 
 # %%
 @set_timeout(90, after_timeout)
-def termux_sms_list(
-    timecreated: bool = True, num: int = 10, shownumber: bool = True, where: str = "all"
-):
+def termux_sms_list(timecreated: bool = True, num: int = 10, shownumber: bool = True, where: str = "all"):
     cmdlst = ["termux-sms-list"]
     if timecreated:
         cmdlst.append("-d")
