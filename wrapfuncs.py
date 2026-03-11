@@ -78,7 +78,7 @@ def logit(func: Callable) -> Callable:
 
 
 # %%
-def ift2phone(msg: str|None =None) -> Callable:
+def ift2phone(msg: str | None = None) -> Callable:
     """装饰器，在目标函数运行时将信息通过ifttt发送至手机
 
     Args:
@@ -127,7 +127,9 @@ def timethis(func: Callable) -> Callable:
         end = time.time()
         timelen = end - start
         if timelen >= (60 * 60):
-            timelenstr = f"{int(timelen / (60 * 60))}小时{int((timelen % (60 * 60)) / 60)}分钟{timelen % (60 * 60) % 60:.2f}秒"
+            timelenstr = (
+                f"{int(timelen / (60 * 60))}小时{int((timelen % (60 * 60)) / 60)}分钟{timelen % (60 * 60) % 60:.2f}秒"
+            )
         elif timelen >= 60:
             timelenstr = f"{int(timelen / 60)}分钟{timelen % 60:.2f}秒"
         else:
