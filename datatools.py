@@ -11,11 +11,12 @@
 #       format_version: '1.3'
 # ---
 
-# %%
-"""
-txt数据文件操作函数
-部分文件功能函数
-"""
+# %% [markdown]
+# # txt数据文件操作函数
+# 部分文件功能函数
+
+# %% [markdown]
+# ## 引入重要库
 
 # %%
 import binascii
@@ -37,18 +38,25 @@ with pathmagic.context():
     # from func.wrapfuncs import timethis
 
 # %% [markdown]
+# ## 函数集
+
+# %% [markdown]
 # print(f"{__file__} is loading now...")
 
 
+# %% [markdown]
+# ### tr2hex(string)
+
 # %%
 def str2hex(string):
-    """
-    转换字符串为hex字符串（大写）
-    """
+    """转换字符串为hex字符串（大写）"""
     str_bin = string.encode("utf-8")
 
     return binascii.hexlify(str_bin).decode("utf-8").upper()
 
+
+# %% [markdown]
+# ### getfilepathnameext(tfile)
 
 # %%
 def getfilepathnameext(tfile):
@@ -58,6 +66,9 @@ def getfilepathnameext(tfile):
 
     return filepath, tmpfilename, shotename, fileext
 
+
+# %% [markdown]
+# ### write2txt(weathertxtfilename, inputitemlist)
 
 # %%
 def write2txt(weathertxtfilename, inputitemlist):
@@ -70,6 +81,9 @@ def write2txt(weathertxtfilename, inputitemlist):
             fileobject.write(str(item) + "\n")
     fileobject.close()
 
+
+# %% [markdown]
+# ### readfromtxt(weathertxtfilename)
 
 # %%
 def readfromtxt(weathertxtfilename):
@@ -88,12 +102,18 @@ def readfromtxt(weathertxtfilename):
     return items
 
 
+# %% [markdown]
+# ### get_filesize(filepath)
+
 # %%
 def get_filesize(filepath):
     fsize = os.path.getsize(filepath)
     fsize = fsize / float(1024 * 1024)
     return round(fsize, 2)
 
+
+# %% [markdown]
+# ### compact_sqlite3_db(dbpath)
 
 # %%
 # @timethis
@@ -102,10 +122,11 @@ def compact_sqlite3_db(dbpath):
     conn = lite.connect(dbpath)
     conn.execute("VACUUM")
     conn.close()
-    log.info(
-        f"{dbpath}数据库压缩前大小为{sizebefore}MB，压缩之后为{get_filesize(dbpath)}MB。"
-    )
+    log.info(f"{dbpath}数据库压缩前大小为{sizebefore}MB，压缩之后为{get_filesize(dbpath)}MB。")
 
+
+# %% [markdown]
+# ## 主函数
 
 # %%
 if __name__ == "__main__":
