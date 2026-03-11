@@ -14,13 +14,13 @@
 # %% [markdown]
 # # 网络函数包
 
-# %%
-"""
-网络相关函数集
-"""
+# %% [markdown]
+#  网络相关函数集
+
 
 # %% [markdown]
-# # 引入库
+# ## 引入库
+
 
 # %%
 import os
@@ -45,6 +45,7 @@ from py2ifttt import IFTTT
 from requests.exceptions import *
 from urllib3.exceptions import MaxRetryError, NewConnectionError
 
+
 # %%
 import pathmagic
 
@@ -55,18 +56,18 @@ with pathmagic.context():
 
 
 # %% [markdown]
-# # 函数集
+# ## 函数集
+
 
 # %% [markdown]
-# ## def ischat(pklabpath)
-
+# ### isitchat(pklabpath)
 
 # %%
 def isitchat(pklabpath):
-    """
-    判断itchat是否已经运行，没有则热启动之。
-    如果成功则返回True，否则直接退出运行。
-    """
+    (
+        "判断itchat是否已经运行，没有则热启动之，如果成功则返回True，否则直接退出运行。"
+        """判断itchat是否已经运行，没有则热启动之，如果成功则返回True，否则直接退出运行。"""
+    )
 
     inputpklpath = os.path.abspath(pklabpath)
     #     print(inputpklpath)
@@ -95,7 +96,7 @@ def isitchat(pklabpath):
 
 
 # %% [markdown]
-# ## def get_ip(*args)
+# ### def get_ip(*args)
 
 
 # %%
@@ -108,9 +109,7 @@ def get_ip(*args):
         ip = my_addr.split("\n")[0]
         return ip
     else:
-        my_addr = os.popen(
-            "ifconfig | grep -A 1 %s|tail -1| awk '{print $2}'" % args[0]
-        ).read()
+        my_addr = os.popen("ifconfig | grep -A 1 %s|tail -1| awk '{print $2}'" % args[0]).read()
         print(my_addr)
         ipfind = re.search(
             r"(?<![\.\d])(?:25[0-5]\.|2[0-4]\d\.|[01]?\d\d?\.)"
@@ -127,13 +126,12 @@ def get_ip(*args):
 
 
 # %% [markdown]
-# ## def get_host_ip()
+# ### def get_host_ip()
 
 
 # %%
 def get_host_ip():
-    """
-    在windows下查询本机ip地址,对多个网卡可以得到wlan0那个,亲测有效
+    """在windows下查询本机ip地址,对多个网卡可以得到wlan0那个,亲测有效
     :return: ip
     """
     s = None
@@ -149,7 +147,7 @@ def get_host_ip():
 
 
 # %% [markdown]
-# ## def get_ip4alleth(*args)
+# ### def get_ip4alleth(*args)
 
 
 # %%
@@ -167,9 +165,7 @@ def get_ip4alleth(*args):
         print(ethlst)
         ethlst2test = [x for x in ethlst if x != "lo"]
         for ethitem in ethlst2test:
-            my_addr = os.popen(
-                "ifconfig | grep -A 1 %s|tail -1| awk '{print $2}'" % ethitem
-            ).read()
+            my_addr = os.popen("ifconfig | grep -A 1 %s|tail -1| awk '{print $2}'" % ethitem).read()
             print(my_addr)
             ipfind = re.search(
                 r"(?<![\.\d])(?:25[0-5]\.|2[0-4]\d\.|[01]?\d\d?\.)"
@@ -188,7 +184,7 @@ def get_ip4alleth(*args):
 
 
 # %% [markdown]
-# ## def trycounttimes2(servname, maxtimes ,maxsecs)
+# ### def trycounttimes2(servname, maxtimes ,maxsecs)
 
 
 # %%
@@ -249,27 +245,19 @@ def trycounttimes2(servname="服务器", maxtimes=100, maxsecs=50):
                                     f"和{servname}连接失败。 Cannot establied a new  connection. no route to host。{eeestr}"
                                 )
                             elif eee.errno == 110:
-                                log.critical(
-                                    f"和{servname}连接失败。 Connection timed out.\t{eeestr}"
-                                )
+                                log.critical(f"和{servname}连接失败。 Connection timed out.\t{eeestr}")
                                 # 断网eptime *= 20
                                 # sleeptime *= 20
                             elif eee.errno == 103:
-                                log.critical(
-                                    f"和{servname}连接失败。Software caused connetction abort.\t{eeestr}"
-                                )
+                                log.critical(f"和{servname}连接失败。Software caused connetction abort.\t{eeestr}")
                             elif eee.errno == 101:
-                                log.critical(
-                                    f"和{servname}连接失败。Network is unreached.\t{eeestr}"
-                                )
+                                log.critical(f"和{servname}连接失败。Network is unreached.\t{eeestr}")
                             elif eee.errno == 13:
                                 log.critical(f"连接{servname}的权限不够哦。{eeestr}")
                             elif eee.errno == 8:
                                 log.critical(f"和{servname}握手失败。{eeestr}")
                             elif eee.errno == 7:
-                                log.critical(
-                                    f"和{servname}连接失败。域名无法解析，断网了  。{eeestr}"
-                                )
+                                log.critical(f"和{servname}连接失败。域名无法解析，断网了  。{eeestr}")
                                 # 断网eptime *= 20
                             elif eee.errno == 4:
                                 log.critical(f"和{servname}连接异常，被中断。{eeestr}")
@@ -295,11 +283,7 @@ def trycounttimes2(servname="服务器", maxtimes=100, maxsecs=50):
                         break
 
                     # 暂歇开始前终端输出，看看而已
-                    print(
-                        extract_traceback4exception(
-                            tbtuple, "trycounttimes2", sleeptime=sleeptime
-                        )
-                    )
+                    print(extract_traceback4exception(tbtuple, "trycounttimes2", sleeptime=sleeptime))
                     time.sleep(sleeptime)
 
         return wrapper
@@ -308,7 +292,7 @@ def trycounttimes2(servname="服务器", maxtimes=100, maxsecs=50):
 
 
 # %% [markdown]
-# ## ifttt_notify(content="content", funcname="funcname")
+# ### ifttt_notify(content="content", funcname="funcname")
 
 
 # %%
@@ -321,7 +305,7 @@ def ifttt_notify(content="content", funcname="funcname"):
 
 
 # %% [markdown]
-# ## tst4trycounttimes2()
+# ### tst4trycounttimes2()
 
 
 # %%
@@ -331,8 +315,7 @@ def tst4trycounttimes2():
 
     @trycounttimes2("xmu.edu.cn网站服务器")
     def fetchfromnet(addressin: object):
-        """
-        从网址获取内容
+        """从网址获取内容
         :param addressin: 网址
         :return: 页面内容html
         """
