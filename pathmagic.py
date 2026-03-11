@@ -42,7 +42,7 @@ class context:  # noqa: N801
         """打印sys.path中的所有路径。"""
         for pson in sys.path:
             print(Path(pson).resolve())
-        print(10 * '*')
+        print(10 * "*")
 
     def __exit__(self, *args: any) -> None:
         """退出上下文管理器时，不做任何操作。"""
