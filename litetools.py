@@ -15,8 +15,7 @@
 # # sqlite3数据库相关函数
 
 # %%
-"""
-sqlite数据库相关应用函数
+"""sqlite数据库相关应用函数"""sqlite数据库相关应用函数
 """
 
 # %% [markdown]
@@ -34,7 +33,6 @@ import pandas as pd
 import pathmagic
 
 with pathmagic.context():
-    from etc.getid import getdevicename
     from func.configpr import getcfpoptionvalue, setcfpoptionvalue
     from func.first import (
         dbpathdingdanmingxi,
@@ -43,6 +41,7 @@ with pathmagic.context():
         getdirmain,
         touchfilepath2depth,
     )
+    from func.getid import getdevicename
     from func.logme import log
     from func.sysfunc import execcmd, not_IPython
     from func.wrapfuncs import timethis
@@ -98,6 +97,10 @@ def ifnotcreate(tablen: str, createsql: str, dbn: str):
     :param tablen:
     :param dbn:
     :return:
+    """如果没有相应数据表就创建一个
+    :param tablen:
+    :param dbn:
+    :return:
     """
 
     if istableindb(tablen, dbn):
@@ -126,9 +129,7 @@ def ifnotcreate(tablen: str, createsql: str, dbn: str):
 def ifclexists(dbin, tb, cl):
     conn = lite.connect(dbin)
     cursor = conn.cursor()
-    structsql = (
-        f"SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = '{tb}';"
-    )
+    structsql = f"SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = '{tb}';"
     tablefd = cursor.execute(structsql).fetchall()
     # [('CREATE TABLE heart5 (id integer primary key autoincrement, name text, age int, imguuid text)',)]
     conn.commit()
@@ -209,8 +210,7 @@ def droptablefromdb(dbname: str, tablename: str, confirm=False):
 def checktableindb(
     ininame: str, dbpath: str, tablename: str, creattablesql: str, confirm=False
 ):
-    """
-    检查数据表（ini登记，物理存储）是否存在并根据情况创建
+    """检查数据表（ini登记，物理存储）是否存在并根据情况创建"""检查数据表（ini登记，物理存储）是否存在并根据情况创建
     """
     absdbpath = os.path.abspath(dbpath)  # 取得绝对路径，用于作为section名称
     if not (ifcreated := getcfpoptionvalue(ininame, absdbpath, tablename)):
@@ -231,8 +231,7 @@ def checktableindb(
 
 # %%
 def convert_intstr_datetime(value):
-    """
-    将时间值转换为 datetime ，支持字符串和整数(timestamp)格式。
+    """将时间值转换为 datetime ，支持字符串和整数(timestamp)格式。"""将时间值转换为 datetime ，支持字符串和整数(timestamp)格式。
     """
     if pd.isna(value):
         return None  # 如果值是 NaN，返回 None
@@ -284,9 +283,7 @@ def clean4timecl(name, dbname, confirm):
         with lite.connect(dbname) as conn:
             cursor = conn.cursor()
             # 创建一个新的临时表，结构与原数据表相同
-            cursor.execute(
-                f"CREATE TABLE wc_{name}_temp AS SELECT * FROM wc_{name} WHERE 1=0"
-            )
+            cursor.execute(f"CREATE TABLE wc_{name}_temp AS SELECT * FROM wc_{name} WHERE 1=0")
             # outdf覆盖导出到临时数据表
             outdf.to_sql(f"wc_{name}_temp", conn, if_exists="append", index=False)
             # 清空原数据表
@@ -318,9 +315,7 @@ def compact_sqlite3_db(dbpath):
     conn = lite.connect(dbpath)
     conn.execute("VACUUM")
     conn.close()
-    log.info(
-        f"{dbpath}数据库压缩前大小为{sizebefore}MB，压缩之后为{get_filesize(dbpath)}MB。"
-    )
+    log.info(f"{dbpath}数据库压缩前大小为{sizebefore}MB，压缩之后为{get_filesize(dbpath)}MB。")
 
 
 # %% [markdown]
@@ -332,9 +327,7 @@ if __name__ == "__main__":
         logstr = f"运行文件\t{__file__}\t……"
         log.info(logstr)
     # print(get_filesize(dbpathquandan))
-    loginstr = (
-        "" if (whoami := execcmd("whoami")) and (len(whoami) == 0) else f"{whoami}"
-    )
+    loginstr = "" if (whoami := execcmd("whoami")) and (len(whoami) == 0) else f"{whoami}"
     dbfilename = f"wcitemsall_({getdevicename()})_({loginstr}).db".replace(" ", "_")
     wcdatapath = getdirmain() / "data" / "webchat"
     dbname = os.path.abspath(wcdatapath / dbfilename)
