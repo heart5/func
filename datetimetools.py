@@ -146,7 +146,7 @@ def test_getstartdate() -> None:
 
 
 # %%
-def gethumantimedelay(inputlocaltime: str, intervalseconds: int=120) -> Union[str, bool]:
+def gethumantimedelay(inputlocaltime: str, intervalseconds: int = 120) -> Union[str, bool]:
     """输入时间和当前时间差值超过120秒（两分钟）时，返回人类可读字符串，否则返回False
 
     输入参数：
