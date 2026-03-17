@@ -14,10 +14,6 @@
 # %% [markdown]
 # # sqlite3数据库相关函数
 
-# %%
-"""sqlite数据库相关应用函数"""sqlite数据库相关应用函数
-"""
-
 # %% [markdown]
 # ## 引入重要库
 
@@ -51,7 +47,7 @@ with pathmagic.context():
 # ## 功能函数集
 
 # %% [markdown]
-# ### def get_filesize(filepath)
+# ### get_filesize(filepath)
 
 
 # %%
@@ -62,7 +58,7 @@ def get_filesize(filepath):
 
 
 # %% [markdown]
-# ### def istableindb(tablein, dbname)
+# ### istableindb(tablein, dbname)
 
 
 # %%
@@ -87,18 +83,16 @@ def istableindb(tablenin: str, dbname: str):
 
 
 # %% [markdown]
-# ### def ifnotcreate(tablein, createsql, dbn)
+# ### ifnotcreate(tablein, createsql, dbn)
 
 
 # %%
 def ifnotcreate(tablen: str, createsql: str, dbn: str):
-    """
-    如果没有相应数据表就创建一个
+    """如果没有相应数据表就创建一个
     :param tablen:
     :param dbn:
     :return:
     """
-
     if istableindb(tablen, dbn):
         return
 
@@ -118,8 +112,7 @@ def ifnotcreate(tablen: str, createsql: str, dbn: str):
 
 
 # %% [markdown]
-# ### def ifclexists(dbin, tb, cl)
-
+# ### ifclexists(dbin, tb, cl)
 
 # %%
 def ifclexists(dbin, tb, cl):
@@ -155,8 +148,7 @@ def ifclexists(dbin, tb, cl):
 
 
 # %% [markdown]
-# ### def shwotableindb(dbname)
-
+# ### shwotableindb(dbname)
 
 # %%
 def showtablesindb(dbname: str):
@@ -178,8 +170,7 @@ def showtablesindb(dbname: str):
 
 
 # %% [markdown]
-# ### def droptablefromdb(dbname, tablename, confirm=False)
-
+# ### droptablefromdb(dbname, tablename, confirm=False)
 
 # %%
 def droptablefromdb(dbname: str, tablename: str, confirm=False):
@@ -199,15 +190,10 @@ def droptablefromdb(dbname: str, tablename: str, confirm=False):
 
 
 # %% [markdown]
-# ### def checktableindb(ininame, dbpath, tablename, creattablesql, confirm=False)
-
+# ### checktableindb(ininame, dbpath, tablename, creattablesql, confirm=False)
 
 # %%
-def checktableindb(
-    ininame: str, dbpath: str, tablename: str, creattablesql: str, confirm=False
-):
-    """检查数据表（ini登记，物理存储）是否存在并根据情况创建
-    """
+def checktableindb(ininame: str, dbpath: str, tablename: str, creattablesql: str, confirm=False):
     absdbpath = os.path.abspath(dbpath)  # 取得绝对路径，用于作为section名称
     if not (ifcreated := getcfpoptionvalue(ininame, absdbpath, tablename)):
         print(ifcreated)
@@ -222,13 +208,10 @@ def checktableindb(
 
 
 # %% [markdown]
-# ### def convert_intstr_datetime(value)
-
+# ### convert_intstr_datetime(value)
 
 # %%
 def convert_intstr_datetime(value):
-    """将时间值转换为 datetime ，支持字符串和整数(timestamp)格式。
-    """
     if pd.isna(value):
         return None  # 如果值是 NaN，返回 None
     if isinstance(value, str):
@@ -245,7 +228,6 @@ def convert_intstr_datetime(value):
 
 # %% [markdown]
 # ### clean4timecl(name, dbname, confirm)
-
 
 # %%
 @timethis
@@ -301,8 +283,7 @@ def clean4timecl(name, dbname, confirm):
 
 
 # %% [markdown]
-# ### def compact_sqlite3_db(dbpath)
-
+# ### compact_sqlite3_db(dbpath)
 
 # %%
 @timethis
