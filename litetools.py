@@ -231,7 +231,7 @@ def checktableindb(
 
 # %%
 def convert_intstr_datetime(value):
-    """将时间值转换为 datetime ，支持字符串和整数(timestamp)格式。"""将时间值转换为 datetime ，支持字符串和整数(timestamp)格式。
+    """将时间值转换为 datetime ，支持字符串和整数(timestamp)格式。
     """
     if pd.isna(value):
         return None  # 如果值是 NaN，返回 None
