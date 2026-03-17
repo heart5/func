@@ -97,10 +97,6 @@ def ifnotcreate(tablen: str, createsql: str, dbn: str):
     :param tablen:
     :param dbn:
     :return:
-    """如果没有相应数据表就创建一个
-    :param tablen:
-    :param dbn:
-    :return:
     """
 
     if istableindb(tablen, dbn):
@@ -210,7 +206,7 @@ def droptablefromdb(dbname: str, tablename: str, confirm=False):
 def checktableindb(
     ininame: str, dbpath: str, tablename: str, creattablesql: str, confirm=False
 ):
-    """检查数据表（ini登记，物理存储）是否存在并根据情况创建"""检查数据表（ini登记，物理存储）是否存在并根据情况创建
+    """检查数据表（ini登记，物理存储）是否存在并根据情况创建
     """
     absdbpath = os.path.abspath(dbpath)  # 取得绝对路径，用于作为section名称
     if not (ifcreated := getcfpoptionvalue(ininame, absdbpath, tablename)):
