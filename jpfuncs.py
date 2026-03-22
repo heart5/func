@@ -775,16 +775,16 @@ def get_notes_in_notebook(notebook_id: str, fields: str = None, limit: int = Non
     global jpapi
     try:
         # 调用Joplin API获取指定笔记本下的笔记（parent_id=笔记本ID）
-        nb = jpapi.get_notebook(parent_id)
+        nb = jpapi.get_notebook(notebook_id)
         # 基础字段（parent_id到source_url）
         base_fields = "parent_id, title, body, created_time, updated_time, is_conflict, latitude, longitude, altitude, author, source_url"
         notes = jpapi.get_all_notes(parent_id=notebook_id, fields=base_fields)
-        results = [note for note in notes if note.parent_id == parent_id]
+        results = [note for note in notes if note.parent_id == notebook_id]
         log.info(f"限定笔记本《{nb.title}》后，搜索结果有{len(results)}条笔记")
         # 应用数量限制
         if limit is not None and len(notes) > limit:
             results = results[:limit]
-        log.info(f"成功获取笔记本《{nb.title}》（ID: {notebook_id}）下的{len(notes)}条笔记")
+        log.info(f"成功获取笔记本《{nb.title}》（ID: {notebook_id}）下的{len(results)}条笔记")
         return results
     except Exception as e:
         log.error(f"获取笔记本《{nb.title}》（ID: {notebook_id}）笔记失败：{str(e)}")
@@ -906,6 +906,10 @@ if __name__ == "__main__":
         # local_arrow = utc_arrow.to('Asia/Shanghai')
         local_arrow = utc_arrow.to(local_tz)
         print(local_arrow)
+
+    notes = get_notes_in_notebook_by_title(notebook_title="顺风顺水")
+    for note in notes:
+        print(note.title)
 
     # createnote(title="重生的笔记", body="some things happen", noteid_spec="3ffccc7c48fc4b25bcd7cf3841421ce5")
     # test_updatenote_imgdata()
