@@ -518,7 +518,10 @@ def update_note_resources_batch(noteid, resource_updates):
 # %%
 @timethis
 def createnotewithfile(
-    title: str = "Superman", body: str = "I am the king of the Universe.", parent_id: str = None, filepath: str = None
+    title: str = "Superman",
+    body: str = "I am the king of the Universe.",
+    parent_id: str = None,
+    filepath: str = None,
 ) -> str:
     """创建笔记并附带文件。
 
@@ -777,7 +780,9 @@ def get_notes_in_notebook(notebook_id: str, fields: str = None, limit: int = Non
         # 调用Joplin API获取指定笔记本下的笔记（parent_id=笔记本ID）
         nb = jpapi.get_notebook(notebook_id)
         # 基础字段（parent_id到source_url）
-        base_fields = "parent_id, title, body, created_time, updated_time, is_conflict, latitude, longitude, altitude, author, source_url"
+        base_fields = (
+            "parent_id, id, title, body, created_time, updated_time, latitude, longitude, altitude, author, source_url"
+        )
         notes = jpapi.get_all_notes(parent_id=notebook_id, fields=base_fields)
         results = [note for note in notes if note.parent_id == notebook_id]
         log.info(f"限定笔记本《{nb.title}》后，搜索结果有{len(results)}条笔记")
@@ -810,6 +815,23 @@ def get_notes_in_notebook_by_title(notebook_title: str, fields: str = None, limi
     notebook_id = searchnotebook(notebook_title)
     # 2. 获取该笔记本下的笔记
     return get_notes_in_notebook(notebook_id, fields, limit)
+
+
+# %% [markdown]
+# ### get_tag_titles(note_id)  # 可选：提取标签标题的便捷函数
+# %%
+def get_tag_titles(note_id: str) -> list:
+    """获取指定笔记ID的标签标题列表（仅返回字符串标题，不含Tag对象）
+
+    Args:
+        note_id (str): 笔记的唯一ID
+
+    Returns:
+        list: 标签标题字符串列表（如["工作", "重要"]）；无标签则返回空列表
+    """
+    global jpapi
+    tags = jpapi.get_tags(note_id).items
+    return [tag.title for tag in tags if hasattr(tag, "title")]
 
 
 # %% [markdown]
@@ -909,7 +931,7 @@ if __name__ == "__main__":
 
     notes = get_notes_in_notebook_by_title(notebook_title="顺风顺水")
     for note in notes:
-        print(note.title)
+        print(note.title, note.id, get_tag_titles(note.id))
 
     # createnote(title="重生的笔记", body="some things happen", noteid_spec="3ffccc7c48fc4b25bcd7cf3841421ce5")
     # test_updatenote_imgdata()
