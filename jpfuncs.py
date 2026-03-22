@@ -30,18 +30,18 @@ from io import BytesIO
 
 import arrow
 
+# from joppy.api import Api
+# from joppy import tools
+# from tzlocal import get_localzone
+# from dateutil import tz
+# %%
+import pathmagic
+
 # import joppy
 # import datetime
 # from pathlib import Path
 from joppy.client_api import ClientApi
 from tzlocal import get_localzone
-# from joppy.api import Api
-# from joppy import tools
-# from tzlocal import get_localzone
-# from dateutil import tz
-
-# %%
-import pathmagic
 
 with pathmagic.context():
     # from func.termuxtools import termux_location, termux_telephony_deviceinfo
@@ -352,11 +352,13 @@ def createresourcefromobj(file_obj, title=None):
 # %% [markdown]
 # ### add_resource_from_bytes(data_bytes, title, mime_type="image/png")
 
+
 # %%
 def add_resource_from_bytes(data_bytes, title, mime_type="image/png"):
     """从字节数据创建资源"""
     file_obj = BytesIO(data_bytes)
     return createresourcefromobj(file_obj, title)
+
 
 # %% [markdown]
 # ### deleteresourcesfromnote(noteid)
@@ -385,6 +387,7 @@ def deleteresourcesfromnote(noteid):
 # %% [markdown]
 # ### extract_resource_ids_from_note(noteid)
 
+
 # %%
 def extract_resource_ids_from_note(noteid):
     """提取笔记中的所有资源ID"""
@@ -398,6 +401,7 @@ def extract_resource_ids_from_note(noteid):
 
 # %% [markdown]
 # ### replace_note_resources(noteid, new_resource_ids, keep_text=True)
+
 
 # %%
 def replace_note_resources(noteid, new_resource_ids, keep_text=True):
@@ -440,6 +444,7 @@ def replace_note_resources(noteid, new_resource_ids, keep_text=True):
 
 # %% [markdown]
 # ### update_note_resources_batch(noteid, resource_updates)
+
 
 # %%
 def update_note_resources_batch(noteid, resource_updates):
@@ -504,6 +509,7 @@ def update_note_resources_batch(noteid, resource_updates):
     jpapi.modify_note(noteid, body=new_body)
 
     return noteid, new_resource_ids
+
 
 # %% [markdown]
 # ### createnotewithfile(title: str = "Superman", body: str = "I am the king of the Universe.", parent_id: str = None, filepath: str = None) -> str
@@ -749,6 +755,56 @@ def searchnotes(key: str, filter: str = "title", parent_id: str = None):
         log.info(f"限定笔记本《{nb.title}》后，搜索结果有{len(results)}条笔记")
 
     return results
+
+
+# %% [markdown]
+# ### get_notes_in_notebook(notebook_id, fields=None, limit=None)
+# %%
+@timethis
+def get_notes_in_notebook(notebook_id: str, fields: str = None, limit: int = None) -> list:
+    """获取指定笔记本（通过ID）下的所有笔记
+
+    Args:
+        notebook_id (str): 笔记本的唯一ID（可通过`searchnotebook`或Joplin界面获取）
+        fields (str, optional): 需返回的笔记字段（逗号分隔，如"id,title,body,updated_time"）。默认返回所有字段。
+        limit (int, optional): 返回笔记的数量上限（按API默认顺序）。默认返回所有笔记。
+
+    Returns:
+        list: 笔记列表（元素为`joppy`库的`Note`对象，可通过属性访问字段）
+    """
+    global jpapi
+    try:
+        # 调用Joplin API获取指定笔记本下的笔记（parent_id=笔记本ID）
+        notes = jpapi.get_all_notes(parent_id=notebook_id, fields=fields)
+        # 应用数量限制
+        if limit is not None and len(notes) > limit:
+            notes = notes[:limit]
+        log.info(f"成功获取笔记本（ID: {notebook_id}）下的{len(notes)}条笔记")
+        return notes
+    except Exception as e:
+        log.error(f"获取笔记本（ID: {notebook_id}）笔记失败：{str(e)}")
+        return []
+
+
+# %% [markdown]
+# ### get_notes_in_notebook_by_title(notebook_title, fields=None, limit=None)
+# %%
+@timethis
+def get_notes_in_notebook_by_title(notebook_title: str, fields: str = None, limit: int = None) -> list:
+    """获取指定笔记本（通过标题）下的所有笔记（自动查找/新建笔记本）
+
+    Args:
+        notebook_title (str): 笔记本的标题（全名）
+        fields (str, optional): 需返回的笔记字段（逗号分隔）。默认返回所有字段。
+        limit (int, optional): 返回笔记的数量上限。默认返回所有笔记。
+
+    Returns:
+        list: 笔记列表（若笔记本不存在则新建，返回空列表）
+    """
+    # 1. 查找或新建笔记本（复用`searchnotebook`函数）
+    notebook_id = searchnotebook(notebook_title)
+    # 2. 获取该笔记本下的笔记
+    return get_notes_in_notebook(notebook_id, fields, limit)
 
 
 # %% [markdown]
