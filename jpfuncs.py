@@ -108,7 +108,7 @@ def get_notebook_ids_for_note(note_id: str) -> List[Dict]:
     [{'c24eb9cf66424e7694d18a122011ddc5': 'programer'}, {'7cb0d1a71cce47f583be5581d8c9535c': 'AI知识库'}]
     """
     note_detail = getnote(note_id)
-    print(note_id, note_detail.title)
+    # print(note_id, note_detail.title)
     notebook_parent_ids = []
     if note_detail and hasattr(note_detail, "parent_id"):
         nb_p_id = note_detail.parent_id
