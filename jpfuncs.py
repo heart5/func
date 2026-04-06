@@ -108,6 +108,27 @@ def searchnotebook(title: str) -> str:
 
 
 # %% [markdown]
+# ### get_notebook_ids_for_note(note_id: str) -> str
+
+# %%
+def get_notebook_ids_for_note(note_id: str) -> List[Dict]:
+    """根据笔记ID获取其所属的笔记本由字典构成的列表，直接父笔记本在最后一个
+    数据示例：
+    1dd6cdf0ec9f469aa88a45289b307229 脑际天路
+    返回示例：
+    [{'c24eb9cf66424e7694d18a122011ddc5': 'programer'}, {'7cb0d1a71cce47f583be5581d8c9535c': 'AI知识库'}]
+    """
+    note_detail = getnote(note_id)
+    print(note_id, note_detail.title)
+    notebook_parent_ids = []
+    if note_detail and hasattr(note_detail, "parent_id"):
+        nb_p_id = note_detail.parent_id
+        notebook_parent_ids.insert(0, {nb_p_id: jpapi.get_notebook(nb_p_id).title})
+        while nb_p_id := jpapi.get_notebook(nb_p_id).parent_id:
+            notebook_parent_ids.insert(0, {nb_p_id: jpapi.get_notebook(nb_p_id).title})
+    return notebook_parent_ids
+
+# %% [markdown]
 # ### def getallnotes()
 
 
@@ -236,7 +257,7 @@ def resid_used(targetid: str) -> bool:
 
 
 # %% [markdown]
-# ### createnote(title="Superman", body="Keep focus, man!", noteid_spec=None, parent_id=None, imgdata64=None)
+# ### createnote(title="Superman", body="Keep focus, man!", parent_id=None, imgdata64=None)
 
 
 # %%
@@ -901,7 +922,323 @@ def content_hash(note_id):
 
 
 # %% [markdown]
-# ### 获取jpapi，全局共用
+# ## 标签管理功能
+
+# %%
+def get_all_tags() -> list:
+    """获取所有标签列表"""
+    global jpapi
+    try:
+        tags = jpapi.get_all_tags()
+        return [tag.name for tag in tags.items] if tags.items else []
+    except Exception as e:
+        log.error(f"获取标签列表失败: {str(e)}")
+        return []
+
+
+# %%
+def get_tag_by_name(tag_name: str):
+    """根据标签名获取标签信息"""
+    global jpapi
+    try:
+        # 搜索标签
+        result = jpapi.search(query=f"tag:{tag_name}", type="tag")
+        if result.items:
+            return result.items
+        return None
+    except Exception as e:
+        log.error(f"获取标签 '{tag_name}' 失败: {str(e)}")
+        return None
+
+
+# %%
+def create_tag(tag_name: str):
+    """创建新标签"""
+    global jpapi
+    try:
+        # 检查标签是否已存在
+        existing_tag = get_tag_by_name(tag_name)
+        if existing_tag:
+            log.info(f"标签 '{tag_name}' 已存在，ID: {existing_tag.id}")
+            return existing_tag
+
+        # 创建新标签
+        tag_id = jpapi.add_tag(tag_name)
+        log.info(f"创建标签 '{tag_name}' 成功，ID: {tag_id}")
+        return {"id": tag_id, "name": tag_name}
+    except Exception as e:
+        log.error(f"创建标签 '{tag_name}' 失败: {str(e)}")
+        return None
+
+
+# %%
+def add_tags_to_note(note_id: str, tags: list):
+    """为笔记添加多个标签
+
+    Args:
+        note_id: 笔记ID
+        tags: 标签列表，可以是字符串列表或逗号分隔的字符串
+    """
+    global jpapi
+
+    # 处理输入格式
+    if isinstance(tags, str):
+        # 支持逗号、中文逗号、换行符分隔
+        tags = [tag.strip() for tag in re.split(r"[,，\n]", tags) if tag.strip()]
+
+    added_tags = []
+    for tag_name in tags:
+        try:
+            # 获取或创建标签
+            tag = get_tag_by_name(tag_name)
+            if not tag:
+                tag_info = create_tag(tag_name)
+                if tag_info:
+                    tag_id = tag_info.get("id") if isinstance(tag_info, dict) else tag_info
+                else:
+                    continue
+            else:
+                tag_id = tag.id
+
+            # 为笔记添加标签
+            jpapi.add_tag_to_note(tag_id=tag_id, note_id=note_id)
+            added_tags.append(tag_name)
+            log.debug(f"为笔记 {note_id} 添加标签 '{tag_name}' 成功")
+
+        except Exception as e:
+            log.warning(f"为笔记 {note_id} 添加标签 '{tag_name}' 失败: {str(e)}")
+
+    if added_tags:
+        log.info(f"为笔记 {note_id} 成功添加标签: {', '.join(added_tags)}")
+    return added_tags
+
+
+# %%
+def remove_tags_from_note(note_id: str, tags: list):
+    """从笔记中移除多个标签
+
+    Args:
+        note_id: 笔记ID
+        tags: 标签列表，可以是字符串列表或逗号分隔的字符串
+    """
+    global jpapi
+
+    # 处理输入格式
+    if isinstance(tags, str):
+        tags = [tag.strip() for tag in re.split(r"[,，\n]", tags) if tag.strip()]
+
+    removed_tags = []
+    for tag_name in tags:
+        try:
+            # 获取标签
+            tag = get_tag_by_name(tag_name)
+            if not tag:
+                log.warning(f"标签 '{tag_name}' 不存在")
+                continue
+
+            # 从笔记中移除标签
+            jpapi.remove_tag_from_note(tag_id=tag.id, note_id=note_id)
+            removed_tags.append(tag_name)
+            log.debug(f"从笔记 {note_id} 移除标签 '{tag_name}' 成功")
+
+        except Exception as e:
+            log.warning(f"从笔记 {note_id} 移除标签 '{tag_name}' 失败: {str(e)}")
+
+    if removed_tags:
+        log.info(f"从笔记 {note_id} 成功移除标签: {', '.join(removed_tags)}")
+    return removed_tags
+
+
+# %%
+def get_note_tags(note_id: str) -> list:
+    """获取笔记的所有标签"""
+    global jpapi
+    try:
+        tags = jpapi.get_tags_of_note(note_id=note_id)
+        return [tag.name for tag in tags.items] if tags.items else []
+    except Exception as e:
+        log.error(f"获取笔记 {note_id} 的标签失败: {str(e)}")
+        return []
+
+
+# %%
+def delete_tag(tag_name: str):
+    """删除标签（同时从所有笔记中移除）"""
+    global jpapi
+    try:
+        # 获取标签
+        tag = get_tag_by_name(tag_name)
+        if not tag:
+            log.warning(f"标签 '{tag_name}' 不存在")
+            return False
+
+        # 删除标签
+        jpapi.delete_tag(tag.id)
+        log.info(f"删除标签 '{tag_name}' 成功")
+        return True
+    except Exception as e:
+        log.error(f"删除标签 '{tag_name}' 失败: {str(e)}")
+        return False
+
+
+# %%
+def search_notes_by_tag(tag_name: str, limit: int = 100):
+    """根据标签搜索笔记"""
+    global jpapi
+    try:
+        # 构建搜索查询
+        query = f"tag:{tag_name}"
+
+        # 搜索笔记
+        results = jpapi.search(query=query, limit=limit)
+
+        # 获取笔记详细信息
+        notes = []
+        for item in results.items:
+            note = getnote(item.id)
+            if note:
+                notes.append(
+                    {
+                        "id": note.id,
+                        "title": note.title,
+                        "created_time": note.created_time,
+                        "updated_time": note.updated_time,
+                    }
+                )
+
+        log.info(f"根据标签 '{tag_name}' 找到 {len(notes)} 条笔记")
+        return notes
+    except Exception as e:
+        log.error(f"根据标签 '{tag_name}' 搜索笔记失败: {str(e)}")
+        return []
+
+
+# %%
+def update_note_tags(note_id: str, new_tags: list, mode: str = "replace"):
+    """更新笔记标签
+
+    Args:
+        note_id: 笔记ID
+        new_tags: 新标签列表
+        mode: 更新模式
+            - "replace": 替换所有标签（先移除所有现有标签，再添加新标签）
+            - "merge": 合并标签（保留现有标签，添加新标签）
+            - "remove": 移除指定标签
+    """
+    if mode == "replace":
+        # 获取当前标签
+        current_tags = get_note_tags(note_id)
+
+        # 移除所有现有标签
+        if current_tags:
+            remove_tags_from_note(note_id, current_tags)
+
+        # 添加新标签
+        if new_tags:
+            add_tags_to_note(note_id, new_tags)
+
+    elif mode == "merge":
+        # 获取当前标签
+        current_tags = get_note_tags(note_id)
+
+        # 合并标签（去重）
+        all_tags = list(set(current_tags + new_tags))
+
+        # 如果标签有变化，先移除所有再重新添加
+        if set(all_tags) != set(current_tags):
+            if current_tags:
+                remove_tags_from_note(note_id, current_tags)
+            add_tags_to_note(note_id, all_tags)
+
+    elif mode == "remove":
+        # 移除指定标签
+        remove_tags_from_note(note_id, new_tags)
+
+    else:
+        log.warning(f"未知的更新模式: {mode}")
+        return False
+
+    return True
+
+
+# %%
+def get_tag_statistics():
+    """获取标签统计信息"""
+    global jpapi
+    try:
+        # 获取所有标签
+        all_tags = get_all_tags()
+
+        # 统计每个标签的笔记数量
+        tag_stats = []
+        for tag_name in all_tags:
+            notes = search_notes_by_tag(tag_name)
+            tag_stats.append(
+                {
+                    "tag": tag_name,
+                    "note_count": len(notes),
+                    "notes": notes[:5],  # 只显示前5条笔记
+                }
+            )
+
+        # 按笔记数量排序
+        tag_stats.sort(key=lambda x: x["note_count"], reverse=True)
+
+        return tag_stats
+    except Exception as e:
+        log.error(f"获取标签统计信息失败: {str(e)}")
+        return []
+
+
+# %%
+def batch_update_tags(notes: list, tags: list, mode: str = "add"):
+    """批量更新多个笔记的标签
+
+    Args:
+        notes: 笔记ID列表
+        tags: 标签列表
+        mode: 更新模式 ("add" 或 "remove")
+    """
+    results = {"success": 0, "failed": 0, "details": []}
+
+    for note_id in notes:
+        try:
+            if mode == "add":
+                added_tags = add_tags_to_note(note_id, tags)
+                if added_tags:
+                    results["success"] += 1
+                    results["details"].append(
+                        {"note_id": note_id, "status": "success", "action": "add", "tags": added_tags}
+                    )
+                else:
+                    results["failed"] += 1
+                    results["details"].append(
+                        {"note_id": note_id, "status": "failed", "action": "add", "error": "添加标签失败"}
+                    )
+
+            elif mode == "remove":
+                removed_tags = remove_tags_from_note(note_id, tags)
+                if removed_tags:
+                    results["success"] += 1
+                    results["details"].append(
+                        {"note_id": note_id, "status": "success", "action": "remove", "tags": removed_tags}
+                    )
+                else:
+                    results["failed"] += 1
+                    results["details"].append(
+                        {"note_id": note_id, "status": "failed", "action": "remove", "error": "移除标签失败"}
+                    )
+
+        except Exception as e:
+            results["failed"] += 1
+            results["details"].append({"note_id": note_id, "status": "error", "action": mode, "error": str(e)})
+
+    log.info(f"批量更新标签完成: 成功 {results['success']} 条，失败 {results['failed']} 条")
+    return results
+
+
+# %% [markdown]
+# ## 获取jpapi，全局共用
 
 # %%
 jpapi = getapi()
