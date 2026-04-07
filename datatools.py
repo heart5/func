@@ -12,21 +12,21 @@
 # ---
 
 # %% [markdown]
-# # txt数据文件操作函数
+# # txt数据文件操作函数集
 # 部分文件功能函数
 
 # %% [markdown]
-# ## 引入重要库
+# # 引入重要库
 
 # %%
 import binascii
+import hashlib
 import os
 import sqlite3 as lite
 
 # %%
 import pathmagic
 
-# %%
 with pathmagic.context():
     from func.first import (
         dbpathdingdanmingxi,
@@ -38,14 +38,22 @@ with pathmagic.context():
     # from func.wrapfuncs import timethis
 
 # %% [markdown]
-# ## 函数集
+# # 函数集
 
 # %% [markdown]
 # print(f"{__file__} is loading now...")
 
 
 # %% [markdown]
-# ### tr2hex(string)
+# ## compute_content_hash(title: str, body: str) -> str
+# %%
+def compute_content_hash(content: str) -> str:
+    """计算文本内容哈希唯一值"""
+    return hashlib.md5(content.encode("utf-8")).hexdigest()
+
+
+# %% [markdown]
+# ## tr2hex(string)
 
 # %%
 def str2hex(string):
@@ -56,7 +64,7 @@ def str2hex(string):
 
 
 # %% [markdown]
-# ### getfilepathnameext(tfile)
+# ## getfilepathnameext(tfile)
 
 # %%
 def getfilepathnameext(tfile):
@@ -68,7 +76,7 @@ def getfilepathnameext(tfile):
 
 
 # %% [markdown]
-# ### write2txt(weathertxtfilename, inputitemlist)
+# ## write2txt(weathertxtfilename, inputitemlist)
 
 # %%
 def write2txt(weathertxtfilename, inputitemlist):
@@ -83,7 +91,7 @@ def write2txt(weathertxtfilename, inputitemlist):
 
 
 # %% [markdown]
-# ### readfromtxt(weathertxtfilename)
+# ## readfromtxt(weathertxtfilename)
 
 # %%
 def readfromtxt(weathertxtfilename):
@@ -103,7 +111,7 @@ def readfromtxt(weathertxtfilename):
 
 
 # %% [markdown]
-# ### get_filesize(filepath)
+# ## get_filesize(filepath)
 
 # %%
 def get_filesize(filepath):
@@ -113,7 +121,7 @@ def get_filesize(filepath):
 
 
 # %% [markdown]
-# ### compact_sqlite3_db(dbpath)
+# ## compact_sqlite3_db(dbpath)
 
 # %%
 # @timethis
@@ -126,7 +134,7 @@ def compact_sqlite3_db(dbpath):
 
 
 # %% [markdown]
-# ## 主函数
+# # 主函数
 
 # %%
 if __name__ == "__main__":
