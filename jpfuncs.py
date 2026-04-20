@@ -773,7 +773,6 @@ def searchnotes(key: str, filter: str = "title", parent_id: str = None):
 # %% [markdown]
 # ### get_notes_in_notebook(notebook_id, fields=None, limit=None)
 # %%
-@timethis
 def get_notes_in_notebook(notebook_id: str, fields: str = None, limit: int = None) -> list:
     """获取指定笔记本（通过ID）下的所有笔记
 
@@ -809,7 +808,6 @@ def get_notes_in_notebook(notebook_id: str, fields: str = None, limit: int = Non
 # %% [markdown]
 # ### get_notes_in_notebook_by_title(notebook_title, fields=None, limit=None)
 # %%
-@timethis
 def get_notes_in_notebook_by_title(notebook_title: str, fields: str = None, limit: int = None) -> list:
     """获取指定笔记本（通过标题）下的所有笔记（自动查找/新建笔记本）
 
