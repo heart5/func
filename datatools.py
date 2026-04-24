@@ -49,7 +49,10 @@ with pathmagic.context():
 
 # %%
 def getkeysfromcloud() -> dict:
-    from func.jpfuncs import getinivaluefromcloud
+    import pathmagic
+
+    with pathmagic.context():
+        from func.jpfuncs import getinivaluefromcloud
 
     secure_keys = getinivaluefromcloud("joplinai", "secure_keys")
     s_keys = {}
