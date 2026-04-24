@@ -49,12 +49,18 @@ with pathmagic.context():
 
 # %%
 def getkeysfromcloud() -> dict:
+    from func.jpfuncs import getinivaluefromcloud
+
     secure_keys = getinivaluefromcloud("joplinai", "secure_keys")
     s_keys = {}
     for pair in [son.split(":") for son in secure_keys.split(",")]:
         s_keys[pair[0]] = pair[1]
 
     return s_keys
+
+
+# %%
+getkeysfromcloud()
 
 
 # %% [markdown]
