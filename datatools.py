@@ -45,6 +45,19 @@ with pathmagic.context():
 
 
 # %% [markdown]
+# ## getkeysfromcloud() -> dict
+
+# %%
+def getkeysfromcloud() -> dict:
+    secure_keys = getinivaluefromcloud("joplinai", "secure_keys")
+    s_keys = {}
+    for pair in [son.split(":") for son in secure_keys.split(",")]:
+        s_keys[pair[0]] = pair[1]
+
+    return s_keys
+
+
+# %% [markdown]
 # ## compute_content_hash(title: str, body: str) -> str
 # %%
 def compute_content_hash(content: str) -> str:
