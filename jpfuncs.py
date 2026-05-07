@@ -27,6 +27,7 @@ from io import BytesIO
 from typing import Dict, List, Optional, Tuple
 
 import arrow
+import requests
 from joppy.client_api import ClientApi
 from tzlocal import get_localzone
 # %%
@@ -77,7 +78,14 @@ def getapi() -> ClientApi:
         )
         url = f"http://localhost:{kvdict.get('port')}"
         api = ClientApi(token=kvdict.get("token"), url=url)
-        return api
+        # 验证 Joplin server 是否真实在运行（joplin config 仅读取配置，不检查服务状态）
+        try:
+            resp = requests.get(f"{url}/api/ping", timeout=3)
+            if resp.status_code == 200:
+                return api
+            log.warning(f"本地 Joplin server 有配置但无响应 (HTTP {resp.status_code})")
+        except Exception:
+            log.warning("本地 Joplin server 有配置但无法连接")
 
     # 本地不可用，尝试远程回退（通过本地 INI 配置，避免循环依赖）
     log.warning(f"主机【{gethostuser()}】本地 Joplin server 不可用，尝试远程回退连接...")
