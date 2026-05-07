@@ -77,15 +77,11 @@ def getapi() -> ClientApi:
             ]
         )
         url = f"http://localhost:{kvdict.get('port')}"
-        api = ClientApi(token=kvdict.get("token"), url=url)
-        # 验证 Joplin server 是否真实在运行（joplin config 仅读取配置，不检查服务状态）
-        try:
-            resp = requests.get(f"{url}/api/ping", timeout=3)
-            if resp.status_code == 200:
-                return api
-            log.warning(f"本地 Joplin server 有配置但无响应 (HTTP {resp.status_code})")
-        except Exception:
-            log.warning("本地 Joplin server 有配置但无法连接")
+        # 用 joplin server status 验证服务是否真实在运行（joplin config 仅读取配置，不检查进程状态）
+        status = execcmd("joplin server status")
+        if "Server is running" in status:
+            return ClientApi(token=kvdict.get("token"), url=url)
+        log.warning("本地 Joplin server 有配置但未运行")
 
     # 本地不可用，尝试远程回退（直接读 INI 文件，避免循环依赖）
     log.warning(f"主机【{gethostuser()}】本地 Joplin server 不可用，尝试远程回退连接...")
