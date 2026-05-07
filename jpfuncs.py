@@ -54,27 +54,42 @@ with pathmagic.context():
 # %%
 @timethis
 def getapi() -> ClientApi:
-    """获取api方便调用，自适应不同的joplin server端口；通过命令行joplin获取相关配置参数值"""
+    """获取 Joplin API 客户端。本地优先，若本地不可用则回退到远程 Joplin server。
+
+    连接策略：
+      1. 通过命令行 `joplin config api.token&joplin config api.port` 获取本地参数
+      2. 若本地成功 → 连接 localhost
+      3. 若本地失败 → 读取 data/joplinai.ini 中 [joplin] 下的 fallback_url / fallback_token
+      4. 若回退成功 → 连接远程 Joplin server
+      5. 全部失败 → 退出进程
+    """
     # 一次运行两个命令，减少一次命令行调用
     jpcmdstr = execcmd("joplin config api.token&joplin config api.port")
-    if jpcmdstr.find("=") == -1:
-        logstr = f"主机【{gethostuser()}】貌似尚未运行joplin server！\n退出运行！！！"
-        log.critical(f"{logstr}")
-        exit(1)
-    splitlst = [line.split("=") for line in re.findall(".+=.*", jpcmdstr)]
-    # 简化api.token为token，port类似，同时把默认的port替换为41184
-    kvdict = dict(
-        [
-            [x.split(".")[-1].strip() if x.split(".")[-1].strip() != "null" else 41184 for x in sonlst]
-            for sonlst in splitlst
-        ]
-    )
+    if jpcmdstr.find("=") != -1:
+        # 本地 Joplin server 可用
+        splitlst = [line.split("=") for line in re.findall(".+=.*", jpcmdstr)]
+        # 简化api.token为token，port类似，同时把默认的port替换为41184
+        kvdict = dict(
+            [
+                [x.split(".")[-1].strip() if x.split(".")[-1].strip() != "null" else 41184 for x in sonlst]
+                for sonlst in splitlst
+            ]
+        )
+        url = f"http://localhost:{kvdict.get('port')}"
+        api = ClientApi(token=kvdict.get("token"), url=url)
+        return api
 
-    url = f"http://localhost:{kvdict.get('port')}"
-    # print(kvdict.get("token"), url)
-    api = ClientApi(token=kvdict.get("token"), url=url)
+    # 本地不可用，尝试远程回退（通过本地 INI 配置，避免循环依赖）
+    log.warning(f"主机【{gethostuser()}】本地 Joplin server 不可用，尝试远程回退连接...")
+    remote_url = getcfpoptionvalue("joplinai", "joplin", "fallback_url")
+    remote_token = getcfpoptionvalue("joplinai", "joplin", "fallback_token")
+    if remote_url and remote_token:
+        log.info(f"Joplin API 已连接（远程回退）: {remote_url}")
+        return ClientApi(token=remote_token, url=remote_url)
 
-    return api
+    logstr = f"主机【{gethostuser()}】本地 Joplin server 不可用，且无远程回退配置！\n退出运行！！！"
+    log.critical(f"{logstr}")
+    exit(1)
 
 
 # %% [markdown]
