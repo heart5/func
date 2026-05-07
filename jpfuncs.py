@@ -87,11 +87,23 @@ def getapi() -> ClientApi:
         except Exception:
             log.warning("本地 Joplin server 有配置但无法连接")
 
-    # 本地不可用，尝试远程回退（通过本地 INI 配置，避免循环依赖）
+    # 本地不可用，尝试远程回退（直接读 INI 文件，避免循环依赖）
     log.warning(f"主机【{gethostuser()}】本地 Joplin server 不可用，尝试远程回退连接...")
-    remote_url = getcfpoptionvalue("joplinai", "joplin", "fallback_url")
-    remote_token = getcfpoptionvalue("joplinai", "joplin", "fallback_token")
+    remote_url = remote_token = None
+    try:
+        from configparser import ConfigParser
+
+        ini_path = Path(getdirmain()) / "data" / "joplinai.ini"
+        if ini_path.exists():
+            cp = ConfigParser()
+            cp.read(ini_path, encoding="utf-8")
+            remote_url = cp.get("joplin", "fallback_url", fallback=None)
+            remote_token = cp.get("joplin", "fallback_token", fallback=None)
+    except Exception:
+        pass
+    remote_attempted = False
     if remote_url and remote_token:
+        remote_attempted = True
         # 验证远程 Joplin server 是否可达
         try:
             resp = requests.get(f"{remote_url}/api/ping", timeout=5)
@@ -102,7 +114,10 @@ def getapi() -> ClientApi:
         except Exception:
             log.warning(f"远程 Joplin server 不可达: {remote_url}")
 
-    logstr = f"主机【{gethostuser()}】本地 Joplin server 不可用，且无远程回退配置！\n退出运行！！！"
+    if remote_attempted:
+        logstr = f"主机【{gethostuser()}】本地与远程 Joplin server 均不可达！\n退出运行！！！"
+    else:
+        logstr = f"主机【{gethostuser()}】本地 Joplin server 不可用，且未配置远程回退！\n退出运行！！！"
     log.critical(f"{logstr}")
     exit(1)
 
