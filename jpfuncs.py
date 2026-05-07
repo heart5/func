@@ -100,13 +100,13 @@ def getapi() -> ClientApi:
     remote_attempted = False
     if remote_url and remote_token:
         remote_attempted = True
-        # 验证远程 Joplin server 是否可达
+        # 验证远程 Joplin 是否可达（桌面端 API 用 /ping?token=，而不是 /api/ping）
         try:
-            resp = requests.get(f"{remote_url}/api/ping", timeout=5)
+            resp = requests.get(f"{remote_url}/ping", params={"token": remote_token}, timeout=5)
             if resp.status_code == 200:
                 log.info(f"Joplin API 已连接（远程回退）: {remote_url}")
                 return ClientApi(token=remote_token, url=remote_url)
-            log.warning(f"远程 Joplin server 有响应但状态异常 (HTTP {resp.status_code})")
+            log.warning(f"远程 Joplin 有响应但状态异常 (HTTP {resp.status_code})")
         except Exception:
             log.warning(f"远程 Joplin server 不可达: {remote_url}")
 
