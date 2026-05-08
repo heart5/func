@@ -54,39 +54,8 @@ with pathmagic.context():
 
 
 # %%
-@timethis
-def getapi() -> ClientApi:
-    """获取 Joplin API 客户端。本地优先，若本地不可用则回退到远程 Joplin server。
-
-    连接策略：
-      1. 通过命令行 `joplin config api.token&joplin config api.port` 获取本地参数
-      2. 若本地成功 → 连接 localhost
-      3. 若本地失败 → 读取 data/joplinai.ini 中 [joplin] 下的 fallback_url / fallback_token
-      4. 若回退成功 → 连接远程 Joplin server
-      5. 全部失败 → 退出进程
-    """
-    # 一次运行两个命令，减少一次命令行调用
-    jpcmdstr = execcmd("joplin config api.token&joplin config api.port")
-    if jpcmdstr.find("=") != -1:
-        # 本地 Joplin server 可用
-        splitlst = [line.split("=") for line in re.findall(".+=.*", jpcmdstr)]
-        # 简化api.token为token，port类似，同时把默认的port替换为41184
-        kvdict = dict(
-            [
-                [x.split(".")[-1].strip() if x.split(".")[-1].strip() != "null" else 41184 for x in sonlst]
-                for sonlst in splitlst
-            ]
-        )
-        url = f"http://localhost:{kvdict.get('port')}"
-        # 用 joplin server status 验证服务是否真实在运行（joplin config 仅读取配置，不检查进程状态）
-        status = execcmd("joplin server status")
-        if "Server is running" in status:
-            return ClientApi(token=kvdict.get("token"), url=url)
-        log.warning("本地 Joplin server 有配置但未运行")
-
-    # 本地不可用，尝试远程回退（直接读 INI 文件，避免循环依赖）
-    log.warning(f"主机【{gethostuser()}】本地 Joplin server 不可用，尝试远程回退连接...")
-    remote_url = remote_token = None
+def _read_remote_config():
+    """读取 data/joplinai.ini 中的远程 Joplin 配置。返回 (url, token) 或 (None, None)。"""
     try:
         from configparser import ConfigParser
 
@@ -94,28 +63,82 @@ def getapi() -> ClientApi:
         if ini_path.exists():
             cp = ConfigParser()
             cp.read(ini_path, encoding="utf-8")
-            remote_url = cp.get("joplin", "fallback_url", fallback=None)
-            remote_token = cp.get("joplin", "fallback_token", fallback=None)
+            url = cp.get("joplin", "fallback_url", fallback=None)
+            token = cp.get("joplin", "fallback_token", fallback=None)
+            return url, token
     except Exception:
         pass
-    remote_attempted = False
-    if remote_url and remote_token:
-        remote_attempted = True
-        # 验证远程 Joplin 是否可达（桌面端 API 用 /ping?token=，而不是 /api/ping）
-        try:
-            resp = requests.get(f"{remote_url}/ping", params={"token": remote_token}, timeout=5)
-            if resp.status_code == 200:
-                log.info(f"Joplin API 已连接（远程回退）: {remote_url}")
-                return ClientApi(token=remote_token, url=remote_url)
-            log.warning(f"远程 Joplin 有响应但状态异常 (HTTP {resp.status_code})")
-        except Exception:
-            log.warning(f"远程 Joplin server 不可达: {remote_url}")
+    return None, None
 
-    if remote_attempted:
-        logstr = f"主机【{gethostuser()}】本地与远程 Joplin server 均不可达！\n退出运行！！！"
+
+def _try_remote(url, token):
+    """尝试连接远程 Joplin server，成功返回 ClientApi，失败返回 None。"""
+    try:
+        resp = requests.get(f"{url}/ping", params={"token": token}, timeout=5)
+        if resp.status_code == 200:
+            log.info(f"Joplin API 已连接（远程）: {url}")
+            return ClientApi(token=token, url=url)
+        log.warning(f"远程 Joplin 有响应但状态异常 (HTTP {resp.status_code})")
+    except Exception:
+        log.warning(f"远程 Joplin server 不可达: {url}")
+    return None
+
+
+def _try_local():
+    """尝试连接本地 Joplin server，成功返回 ClientApi，失败返回 None。"""
+    jpcmdstr = execcmd("joplin config api.token&joplin config api.port")
+    if jpcmdstr.find("=") == -1:
+        return None
+    splitlst = [line.split("=") for line in re.findall(".+=.*", jpcmdstr)]
+    kvdict = dict(
+        [
+            [x.split(".")[-1].strip() if x.split(".")[-1].strip() != "null" else 41184 for x in sonlst]
+            for sonlst in splitlst
+        ]
+    )
+    url = f"http://localhost:{kvdict.get('port')}"
+    status = execcmd("joplin server status")
+    if "Server is running" in status:
+        return ClientApi(token=kvdict.get("token"), url=url)
+    log.warning("本地 Joplin server 有配置但未运行")
+    return None
+
+
+@timethis
+def getapi() -> ClientApi:
+    """获取 Joplin API 客户端。
+
+    连接策略：
+      1. 若 data/joplinai.ini 配置了远程地址 → 优先连接远程 Joplin server
+      2. 否则尝试本地 joplin CLI 获取本地 server 信息
+      3. 全部失败 → 退出进程
+    """
+    remote_url, remote_token = _read_remote_config()
+    if remote_url and remote_token:
+        # 有远程配置 → 远程优先，跳过本地 joplin CLI（避免 systemd 下耗时异常）
+        api = _try_remote(remote_url, remote_token)
+        if api is not None:
+            return api
+        # 远程不通，再尝试本地
+        log.warning("远程连接失败，尝试本地 Joplin server...")
+        api = _try_local()
+        if api is not None:
+            return api
     else:
-        logstr = f"主机【{gethostuser()}】本地 Joplin server 不可用，且未配置远程回退！\n退出运行！！！"
-    log.critical(f"{logstr}")
+        # 无远程配置 → 本地优先（向后兼容）
+        api = _try_local()
+        if api is not None:
+            return api
+        # 本地不通，尝试远程
+        api = _try_remote(remote_url, remote_token) if remote_url and remote_token else None
+        if api is not None:
+            return api
+
+    log.critical(
+        f"主机【{gethostuser()}】Joplin server 不可达"
+        + ("（已配置远程）" if remote_url else "（未配置远程）")
+        + "，退出运行！！！"
+    )
     exit(1)
 
 
