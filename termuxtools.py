@@ -402,16 +402,18 @@ def termux_sms_list(timecreated: bool = True, num: int = 10, shownumber: bool = 
 
 # %%
 @set_timeout(90, after_timeout)
-def termux_sms_send(msg="hi"):
+def termux_sms_send(msg="hi", phone_number=None):
     cmdtool = "termux-sms-send"
     if not is_tool_valid(cmdtool):
         log.critical(f"命令\t{cmdtool}\t在该系统不存在，跳过执行")
         return
-    cmdlist = [cmdtool, "-n", "15387182166", f"{msg}"]
+    if phone_number is None:
+        log.warning(f"未提供电话号码，跳过发送短信：{msg}")
+        return
+    cmdlist = [cmdtool, "-n", str(phone_number), f"{msg}"]
     out, rc, err = utils.execute(cmdlist)
     if rc:
-        log.Warning(f"发送短信时出现错误：{msg}")
-        # raise Exception(err)
+        log.warning(f"发送短信时出现错误：{msg}")
     else:
         log.info(f"成功发送短信。")
     return out
