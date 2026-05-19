@@ -35,6 +35,7 @@ with pathmagic.context():
         touchfilepath2depth,
     )
     from func.logme import log
+    from func.jpfuncs import getinivaluefromcloud
 
 # %% [markdown]
 # # 函数集
@@ -48,22 +49,12 @@ with pathmagic.context():
 
 # %%
 def getkeysfromcloud() -> dict:
-    import pathmagic
-
-    with pathmagic.context():
-        from func.jpfuncs import getinivaluefromcloud
-
     secure_keys = getinivaluefromcloud("joplinai", "secure_keys")
     s_keys = {}
     for pair in [son.split(":") for son in secure_keys.split(",")]:
         s_keys[pair[0]] = pair[1]
 
     return s_keys
-
-
-# %%
-# 模块级调用已移除：getkeysfromcloud() 返回 secure_keys 字典，
-# 但此处未赋值接收，属无效副作用调用。下游如需密钥请显式调用 getkeysfromcloud()。
 
 
 # %% [markdown]
