@@ -28,6 +28,7 @@ import pathmagic
 
 with pathmagic.context():
     from func.common import utils
+    from func.configpr import getcfpoptionvalue
     from func.logme import log
     from func.sysfunc import (
         after_timeout,
@@ -408,6 +409,8 @@ def termux_sms_send(msg="hi", phone_number=None):
         log.critical(f"命令\t{cmdtool}\t在该系统不存在，跳过执行")
         return
     if phone_number is None:
+        phone_number = getcfpoptionvalue("happyjphard", "happyjphard", "sms_phone")
+    if not phone_number:
         log.warning(f"未提供电话号码，跳过发送短信：{msg}")
         return
     cmdlist = [cmdtool, "-n", str(phone_number), f"{msg}"]
