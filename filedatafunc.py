@@ -32,7 +32,6 @@ import pathmagic
 
 # %%
 with pathmagic.context():
-    # from func.evernttest import imglist2note, get_notestore, tablehtml2evernote
     from func.configpr import getcfp
     from func.first import (
         dbpathdingdanmingxi,

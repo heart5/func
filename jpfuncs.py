@@ -35,14 +35,10 @@ from tzlocal import get_localzone
 import pathmagic
 
 with pathmagic.context():
-    # from func.termuxtools import termux_location, termux_telephony_deviceinfo
-    # from func.nettools import ifttt_notify
     from func.configpr import getcfpoptionvalue, setcfpoptionvalue
     from func.first import getdirmain
     from func.getid import gethostuser
     from func.logme import log
-
-    # from func.sysfunc import after_timeout, execcmd, not_IPython, set_timeout
     from func.sysfunc import execcmd, not_IPython
     from func.wrapfuncs import timethis
 

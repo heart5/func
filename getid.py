@@ -34,9 +34,6 @@ with pathmagic.context():
     from func.configpr import getcfpoptionvalue, setcfpoptionvalue
     from func.logme import log
     from func.sysfunc import execcmd, not_IPython
-
-    #     from func.wrapfuncs import timethis, ift2phone
-    # from func.jpfuncs import getinivaluefromcloud
     from func.termuxtools import termux_telephony_deviceinfo
 
     try:

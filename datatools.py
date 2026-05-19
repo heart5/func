@@ -35,7 +35,6 @@ with pathmagic.context():
         touchfilepath2depth,
     )
     from func.logme import log
-    # from func.wrapfuncs import timethis
 
 # %% [markdown]
 # # 函数集

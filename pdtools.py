@@ -44,7 +44,6 @@ from pylab import FuncFormatter, plt
 import pathmagic
 
 with pathmagic.context():
-    # from func.evernttest import evernoteapijiayi, makenote, getinivaluefromnote
     from func.first import (
         dbpathquandan,
         dbpathworkplan,
@@ -57,7 +56,6 @@ with pathmagic.context():
     from func.nettools import trycounttimes2
     from func.sysfunc import not_IPython
     from func.wrapfuncs import timethis
-#    from func.profilerlm import lpt_wrapper
 
 # %% [markdown]
 # print(f"{__file__} is loading now...")

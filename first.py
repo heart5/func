@@ -34,10 +34,6 @@ import matplotlib.pyplot as pltpp
 # %% [markdown]
 # ### touchfilepath2depth(filepath: Path)
 
-# %% [markdown]
-# from func.logme import log
-
-
 # %%
 def touchfilepath2depth(filepath: Path) -> Path:
     filep = Path(filepath)

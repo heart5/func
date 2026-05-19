@@ -32,8 +32,6 @@ import pathmagic
 with pathmagic.context():
     from func.logme import log
     from func.nettools import ifttt_notify
-
-    # from func.jpfuncs import getinivaluefromcloud
     from func.sysfunc import not_IPython
 
 

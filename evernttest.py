@@ -55,7 +55,6 @@ with pathmagic.context():
     from func.nettools import trycounttimes2
     from func.sysfunc import convertframe2dic, not_IPython, extract_traceback4exception, set_timeout, after_timeout
     from func.datetimetools import timestamp2str
-    # from etc.getid import getid
 
 # %% [markdown]
 # print(f"{__file__} is loading now...")
