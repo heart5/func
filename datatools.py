@@ -63,7 +63,8 @@ def getkeysfromcloud() -> dict:
 
 
 # %%
-getkeysfromcloud()
+# 模块级调用已移除：getkeysfromcloud() 返回 secure_keys 字典，
+# 但此处未赋值接收，属无效副作用调用。下游如需密钥请显式调用 getkeysfromcloud()。
 
 
 # %% [markdown]

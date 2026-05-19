@@ -137,9 +137,11 @@ def getapi() -> ClientApi:
     log.critical(
         f"主机【{gethostuser()}】Joplin server 不可达"
         + ("（已配置远程）" if remote_url else "（未配置远程）")
-        + "，退出运行！！！"
     )
-    exit(1)
+    raise JoplinUnreachableError(
+        "Joplin server 不可达"
+        + ("（已配置远程）" if remote_url else "（未配置远程）")
+    )
 
 
 # %% [markdown]
@@ -1290,10 +1292,47 @@ def batch_update_tags(notes: list, tags: list, mode: str = "add"):
 
 
 # %% [markdown]
-# ## 获取jpapi，全局共用
+# ## JoplinUnreachableError — 连接失败时抛出以替代 exit(1)
 
 # %%
-jpapi = getapi()
+class JoplinUnreachableError(Exception):
+    """Joplin server 不可达。调用方可捕获此异常做降级处理。"""
+    pass
+
+
+# %% [markdown]
+# ## 获取jpapi，全局共用（惰性代理）
+#
+# _LazyJoplinAPI 推迟了 getapi() 调用时机：导入期只创建代理对象，
+# 网络连接（getapi）延迟到首次使用 jpapi 的方法/属性时才触发。
+# 外部调用方式完全不变 —— from func.jpfuncs import jpapi 得到代理，
+# jpapi.search(...) / jpapi.get_note(...) 等用法透明代理到真实 ClientApi。
+
+# %%
+class _LazyJoplinAPI:
+    __slots__ = ('_api',)
+
+    def __init__(self):
+        self._api = None
+
+    def _ensure(self):
+        if self._api is None:
+            self._api = getapi()
+        return self._api
+
+    def __getattr__(self, name):
+        if name == '_api':
+            raise AttributeError(name)
+        return getattr(self._ensure(), name)
+
+    def __setattr__(self, name, value):
+        if name == '_api':
+            super().__setattr__(name, value)
+        else:
+            setattr(self._ensure(), name, value)
+
+
+jpapi = _LazyJoplinAPI()
 
 # %% [markdown]
 # ## 主函数main（）

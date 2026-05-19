@@ -62,16 +62,20 @@ def getdirmain() -> Path:
 # ## 定义全局变量
 
 # %%
-dirmainpath = getdirmain()
-dirmain = str(getdirmain())
-dirlog = str(getdirmain() / "log" / "happyjoplin.log")
-dbpathworkplan = str(getdirmain() / "data" / "workplan.db")
-dbpathquandan = str(getdirmain() / "data" / "quandan.db")
-dbpathdingdanmingxi = str(getdirmain() / "data" / "dingdanmingxi.db")
+# 缓存根目录，避免重复文件系统检查
+_dirmain = getdirmain()
+dirmainpath = _dirmain
+dirmain = str(_dirmain)
+dirlog = str(_dirmain / "log" / "happyjoplin.log")
+dbpathworkplan = str(_dirmain / "data" / "workplan.db")
+dbpathquandan = str(_dirmain / "data" / "quandan.db")
+dbpathdingdanmingxi = str(_dirmain / "data" / "dingdanmingxi.db")
 ywananchor = 50000  # 纵轴标识万化锚点
 
 
 # %%
+# sys.path 注入：新项目推荐使用 pathmagic.context() 替代。
+# 此处保留以兼容旧项目，重复路径由 if ... not in sys.path 兜底。
 path2include = ["etc", "func", "work", "life", "study"]
 for p2i in path2include:
     combinepath = str((dirmainpath / p2i).resolve())

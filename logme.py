@@ -77,7 +77,28 @@ def mylog(dirlog: Path) -> lg.Logger:
 
 
 # %%
-log = mylog(Path(dirlog))
+class _LazyLogger:
+    """惰性代理：推迟 mylog() 调用到首次写日志时。
+
+    模块级 log = mylog(...) 导致导入期即创建 RotatingFileHandler
+    和配置 root logger。改为惰性代理后，导入期零 I/O，
+    真正的 mylog() 在首次 log.info/debug/warning 等调用时才执行。
+    """
+    __slots__ = ('_logger',)
+
+    def __init__(self):
+        self._logger = None
+
+    def _ensure(self):
+        if self._logger is None:
+            self._logger = mylog(Path(dirlog))
+        return self._logger
+
+    def __getattr__(self, name):
+        return getattr(self._ensure(), name)
+
+
+log = _LazyLogger()
 
 # %%
 if __name__ == "__main__":
