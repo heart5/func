@@ -157,13 +157,18 @@ def getdeviceid() -> None:
                 print(hex(hash(uid)))
                 id = hex(hash(uid))
             except Exception as e:
-                print("天啊，命令行都不成！只好强行赋值了")
-                id = 123456789
-                type(e)
+                log.critical(
+                    f"无法获取设备唯一ID（Termux和uname均失败），"
+                    f"回退到随机UUID（重启后ID改变，但不会与其他设备碰撞）"
+                )
+                id = hex(hash(uuid.uuid4()))
     #                 raise
     else:
-        log.critical("既不是Windows也不是Linux，那是啥啊。只好强行赋值了！！！")
-        id = 123456789
+        log.critical(
+            f"未知操作系统（{sysstr}），"
+            f"回退到随机UUID（重启后ID改变，但不会与其他设备碰撞）"
+        )
+        id = hex(hash(uuid.uuid4()))
     #         exit(1)
 
     id = str(id)
