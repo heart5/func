@@ -133,6 +133,12 @@ def getapi() -> ClientApi:
     log.critical(
         f"主机【{gethostuser()}】Joplin server 不可达"
         + ("（已配置远程）" if remote_url else "（未配置远程）")
+        + "，退出运行！！！\n"
+        + "配置示例 — 在 data/joplinai.ini 中添加：\n"
+        + "  [joplin]\n"
+        + "  fallback_url = https://your-joplin-host.example.com\n"
+        + "  fallback_token = <api-token>\n"
+        + "或确保本地 Joplin CLI 已配置且 server 正在运行。"
     )
     raise JoplinUnreachableError(
         "Joplin server 不可达"
