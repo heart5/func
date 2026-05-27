@@ -51,20 +51,17 @@ with pathmagic.context():
 
 # %%
 def _read_remote_config():
-    """读取 data/joplinai.ini 中的远程 Joplin 配置。返回 (url, token) 或 (None, None)。"""
+    """读取 data/joplinai.ini 中的 Joplin 配置。返回 (url, token, local_server)。"""
     try:
-        from configparser import ConfigParser
+        from func.configpr import getcfpoptionvalue
 
-        ini_path = Path(getdirmain()) / "data" / "joplinai.ini"
-        if ini_path.exists():
-            cp = ConfigParser()
-            cp.read(ini_path, encoding="utf-8")
-            url = cp.get("joplin", "fallback_url", fallback=None)
-            token = cp.get("joplin", "fallback_token", fallback=None)
-            return url, token
+        url = getcfpoptionvalue("joplinai", "joplin", "fallback_url")
+        token = getcfpoptionvalue("joplinai", "joplin", "fallback_token")
+        local = getcfpoptionvalue("joplinai", "joplin", "local_server")
+        return url, token, local in ("true", "True", "1", "yes")
     except Exception:
         pass
-    return None, None
+    return None, None, False
 
 
 def _try_remote(url, token):
@@ -105,18 +102,19 @@ def getapi() -> ClientApi:
     """获取 Joplin API 客户端。
 
     连接策略：
-      1. ini 有 token → 先以该 token 直连 localhost:41184，通则免绕公网
-      2. localhost 不通 → 走 ini 中 fallback_url
+      1. local_server=true 标记本机 → 直连 localhost:41184，免绕公网
+      2. 否则走 ini 中 fallback_url
       3. 无 ini 配置 → 尝试本地 joplin CLI
       4. 全部失败 → 退出进程
     """
-    ini_url, ini_token = _read_remote_config()
+    ini_url, ini_token, local_server = _read_remote_config()
     if ini_url and ini_token:
-        # 先试本机直连，避免经公网 DNS → Apache 绕一圈
-        api = _try_remote("http://127.0.0.1:41184", ini_token)
-        if api is not None:
-            return api
-        # 本机不通，走 fallback_url
+        # 标记为 Joplin Server 本机 → 直连 localhost，免绕公网
+        if local_server:
+            api = _try_remote("http://127.0.0.1:41184", ini_token)
+            if api is not None:
+                return api
+        # 走 fallback_url
         api = _try_remote(ini_url, ini_token)
         if api is not None:
             return api
