@@ -105,34 +105,39 @@ def getapi() -> ClientApi:
     """获取 Joplin API 客户端。
 
     连接策略：
-      1. 若 data/joplinai.ini 配置了远程地址 → 优先连接远程 Joplin server
-      2. 否则尝试本地 joplin CLI 获取本地 server 信息
-      3. 全部失败 → 退出进程
+      1. ini 有 token → 先以该 token 直连 localhost:41184，通则免绕公网
+      2. localhost 不通 → 走 ini 中 fallback_url
+      3. 无 ini 配置 → 尝试本地 joplin CLI
+      4. 全部失败 → 退出进程
     """
-    remote_url, remote_token = _read_remote_config()
-    if remote_url and remote_token:
-        # 有远程配置 → 远程优先，跳过本地 joplin CLI（避免 systemd 下耗时异常）
-        api = _try_remote(remote_url, remote_token)
+    ini_url, ini_token = _read_remote_config()
+    if ini_url and ini_token:
+        # 先试本机直连，避免经公网 DNS → Apache 绕一圈
+        api = _try_remote("http://127.0.0.1:41184", ini_token)
         if api is not None:
             return api
-        # 远程不通，再尝试本地
+        # 本机不通，走 fallback_url
+        api = _try_remote(ini_url, ini_token)
+        if api is not None:
+            return api
+        # fallback_url 不通，再尝试本地 CLI
         log.warning("远程连接失败，尝试本地 Joplin server...")
         api = _try_local()
         if api is not None:
             return api
     else:
-        # 无远程配置 → 本地优先（向后兼容）
+        # 无 ini 配置 → 本地优先（向后兼容）
         api = _try_local()
         if api is not None:
             return api
         # 本地不通，尝试远程
-        api = _try_remote(remote_url, remote_token) if remote_url and remote_token else None
+        api = _try_remote(ini_url, ini_token) if ini_url and ini_token else None
         if api is not None:
             return api
 
     log.critical(
         f"主机【{gethostuser()}】Joplin server 不可达"
-        + ("（已配置远程）" if remote_url else "（未配置远程）")
+        + ("（已配置 ini）" if ini_url else "（未配置 ini）")
         + "，退出运行！！！\n"
         + "配置示例 — 在 data/joplinai.ini 中添加：\n"
         + "  [joplin]\n"
@@ -142,7 +147,7 @@ def getapi() -> ClientApi:
     )
     raise JoplinUnreachableError(
         "Joplin server 不可达"
-        + ("（已配置远程）" if remote_url else "（未配置远程）")
+        + ("（已配置 ini）" if ini_url else "（未配置 ini）")
     )
 
 
