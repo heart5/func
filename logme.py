@@ -51,7 +51,7 @@ def mylog(dirlog: Path) -> lg.Logger:
         encoding="utf-8",
         # 此处指定log文件的编码方式，否则可能乱码
         maxBytes=1024 * 1024,
-        backupCount=23,
+        backupCount=10,
     )
     formats = lg.Formatter(
         "%(asctime)s\t%(filename)s - [%(funcName)s]\t%(levelname)s: %(message)s",
