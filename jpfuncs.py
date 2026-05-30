@@ -97,6 +97,12 @@ def _try_local():
     return None
 
 
+def _validate_uuid(value: str, param_name: str = "parent_id") -> None:
+    """校验是否为32位hex UUID，不是则抛 ValueError。"""
+    if value and not re.fullmatch(r'[a-f0-9]{32}', value):
+        raise ValueError(f"{param_name} 必须为32位hex UUID，实际值: {value!r}")
+
+
 @timethis
 def getapi() -> ClientApi:
     """获取 Joplin API 客户端。
@@ -351,6 +357,7 @@ def createnote(title="Superman", body="Keep focus, man!", parent_id=None, imgdat
 
     # 设置父目录
     if parent_id:
+        _validate_uuid(parent_id)
         jpapi.modify_note(noteid, parent_id=parent_id)
 
     # 将资源关联到笔记
@@ -625,6 +632,7 @@ def createnotewithfile(
     else:
         note_id = jpapi.add_note(title=title, body=body)
     if parent_id:
+        _validate_uuid(parent_id)
         jpapi.modify_note(note_id, parent_id=parent_id)
     note = getnote(note_id)
     matches = re.findall(r"\[.*\]\(:.*\/([A-Za-z0-9]{32})\)", note.body)
@@ -645,6 +653,7 @@ def updatenote_title(noteid, titlestr, parent_id=None):
     note = getnote(noteid)
     titleold = note.title
     if (parent_id is not None) & (note.parent_id != parent_id):
+        _validate_uuid(parent_id)
         print(f"传入的笔记父目录id为{note.parent_id}，将被调整为{parent_id}")
         jpapi.modify_note(noteid, parent_id=parent_id)
         log.critical(
@@ -665,6 +674,7 @@ def updatenote_body(noteid, bodystr, parent_id=None):
     global jpapi
     note = getnote(noteid)
     if (parent_id is not None) & (note.parent_id != parent_id):
+        _validate_uuid(parent_id)
         print(f"传入的笔记父目录id为{note.parent_id}，将被调整为{parent_id}")
         jpapi.modify_note(noteid, parent_id=parent_id)
         log.critical(
@@ -732,6 +742,7 @@ def updatenote_imgdata(noteid, parent_id=None, imgdata64=None, imgtitle=None, ke
     update_data = {}
 
     if parent_id and parent_id != note.parent_id:
+        _validate_uuid(parent_id)
         update_data["parent_id"] = parent_id
         old_notebook = jpapi.get_notebook(note.parent_id).title if note.parent_id else "根目录"
         new_notebook = jpapi.get_notebook(parent_id).title
@@ -835,6 +846,7 @@ def searchnotes(key: str, filter: str = "title", parent_id: str = None):
     results = jpapi.search(query=query, fields=fields).items
     log.info(f"搜索“{query}”，找到{len(results)}条笔记")
     if parent_id:
+        _validate_uuid(parent_id)
         nb = jpapi.get_notebook(parent_id)
         results = [note for note in results if note.parent_id == parent_id]
         log.info(f"限定笔记本《{nb.title}》后，搜索结果有{len(results)}条笔记")
