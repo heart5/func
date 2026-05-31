@@ -5,6 +5,7 @@
 #     cell_metadata_filter: -all
 #     formats: ipynb,py:percent
 #     notebook_metadata_filter: jupytext,-kernelspec,-jupytext.text_representation.jupytext_version
+#     split_at_heading: true
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -144,6 +145,15 @@ def compact_sqlite3_db(dbpath):
     conn.execute("VACUUM")
     conn.close()
     log.info(f"{dbpath}数据库压缩前大小为{sizebefore}MB，压缩之后为{get_filesize(dbpath)}MB。")
+
+
+# %% [markdown]
+# ## normalize_collection_name(model_name: str) -> str
+
+# %%
+def normalize_collection_name(model_name: str) -> str:
+    """将模型名规范化为 ChromaDB 集合名，替换特殊字符为下划线。"""
+    return model_name.replace(":", "_").replace("/", "_").replace("-", "_")
 
 
 # %% [markdown]
