@@ -87,6 +87,51 @@ def normalize_timestamp(ts: Union[str, int]) -> Union[datetime, int, str]:
 
 
 # %% [markdown]
+# ## normalize_time_to_unix(val) -> str
+
+
+# %%
+def normalize_time_to_unix(val):
+    """将各种时间值统一转为10位unix时间戳字符串。
+
+    支持: None, int/float, datetime对象, unix时间戳字符串,
+          'YYYY-MM-DD HH:MM:SS', 'YYYY-MM-DDTHH:MM:SS' 格式。
+
+    >>> normalize_time_to_unix(None)
+    ''
+    >>> normalize_time_to_unix(1715589914)
+    '1715589914'
+    >>> normalize_time_to_unix('2025-04-28 15:05:07')
+    '1745823907'
+    """
+    if val is None:
+        return ""
+    if isinstance(val, (int, float)):
+        return str(int(val))
+    try:
+        return str(int(val.timestamp()))
+    except Exception:
+        pass
+    if isinstance(val, str):
+        val = val.strip()
+        # 已是纯数字unix时间戳则直接返回
+        if val.isdigit() and len(val) == 10:
+            return val
+        # 尝试解析常见 datetime 字符串格式
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'):
+            try:
+                dt = datetime.strptime(val, fmt)
+                return str(int(dt.timestamp()))
+            except ValueError:
+                continue
+        try:
+            return str(int(float(val)))
+        except (ValueError, OverflowError):
+            pass
+    return str(val)
+
+
+# %% [markdown]
 # ## getstartdate(period: str, thedatetime: datetime) -> datetime
 
 
