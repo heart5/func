@@ -56,6 +56,51 @@ def datecn2utc(datestr: str) -> datetime:
 
 
 # %%
+# %%
+def normalize_chinese_dates(body: str) -> str:
+    """将正文中的中文大写数字日期标题转为阿拉伯数字。
+
+    '### 二零二六年六月七日' → '### 2026年6月7日'
+    '###二零二六年十二月二十一日' → '### 2026年12月21日'
+    同时修复 ### 后缺少空格的情况。
+    """
+    cn_digits = {
+        "零": "0", "〇": "0", "一": "1", "二": "2", "三": "3", "四": "4",
+        "五": "5", "六": "6", "七": "7", "八": "8", "九": "9",
+    }
+
+    def _cn_to_arabic(cn: str) -> str:
+        if "十" not in cn:
+            return "".join(cn_digits.get(c, c) for c in cn)
+        if cn == "十":
+            return "10"
+        if cn.startswith("十"):
+            return "1" + "".join(cn_digits.get(c, c) for c in cn[1:])
+        if cn.endswith("十"):
+            return cn_digits.get(cn[0], cn[0]) + "0"
+        parts = cn.split("十", 1)
+        return cn_digits.get(parts[0], parts[0]) + cn_digits.get(parts[1], parts[1])
+
+    def _replace(m):
+        nl = m.group(1)
+        hashes = m.group(2).rstrip()
+        year = "".join(cn_digits.get(c, c) for c in m.group(3))
+        month = _cn_to_arabic(m.group(4))
+        day = _cn_to_arabic(m.group(5))
+        return f"{nl}{hashes} {year}年{month}月{day}日"
+
+    return re.sub(
+        r"(^|\n)(#{1,6}\s*)([零〇一二三四五六七八九]+)年([零一二三四五六七八九十]+)月([零一二三四五六七八九十]+)[日号]",
+        _replace,
+        body,
+    )
+
+
+# %% [markdown]
+# ## timestamp2str(timestamp: int) -> str
+
+
+# %%
 def timestamp2str(timestamp: int) -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
 
