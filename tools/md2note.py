@@ -212,8 +212,7 @@ def _ssh_tc_joplin_sync(quiet: bool = False):
     """SSH 到 TC 触发 joplin sync（非阻塞，失败不中断）"""
     cmd = [
         "ssh", "tc",
-        "source /usr/miniconda3/etc/profile.d/conda.sh && "
-        "conda activate newlsp && joplin sync"
+        "/usr/miniconda3/bin/conda run -n newlsp joplin sync"
     ]
     try:
         r = subprocess.run(
