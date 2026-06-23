@@ -3,7 +3,7 @@
 #
 # 用法:
 #   python -m func.tools.md2note <file.md> [--notebook NAME] [--data-dir DIR]
-#   python -m func.tools.md2note --find-files [--notebook NAME] [--ssh-sync]
+#   python -m func.tools.md2note --find-files [--notebook NAME]
 #
 # md2note.ini 映射文件存储在 data-dir/data/md2note.ini 中，
 # 由 func.configpr 自动管理，每个项目独立，互不干扰。
@@ -11,7 +11,6 @@
 import argparse
 import os
 import re
-import subprocess  # noqa: S404
 import sys
 from pathlib import Path
 
@@ -208,27 +207,6 @@ def _find_project_md_files(project_root: str) -> list:
     return files
 
 
-def _ssh_tc_joplin_sync(quiet: bool = False):
-    """SSH 到 TC 触发 joplin sync（非阻塞，失败不中断）"""
-    cmd = [
-        "ssh", "tc",
-        "/usr/miniconda3/bin/conda run -n newlsp joplin sync"
-    ]
-    try:
-        r = subprocess.run(
-            " ".join(cmd), shell=True, capture_output=True, text=True, timeout=30
-        )
-        if r.returncode == 0:
-            if not quiet:
-                print("[sync] TC joplin sync 完成")
-        else:
-            log.warning(f"TC joplin sync 失败（非阻塞）: {r.stderr.strip()}")
-    except subprocess.TimeoutExpired:
-        log.warning("TC joplin sync 超时（非阻塞）")
-    except FileNotFoundError:
-        log.warning("ssh 命令不可用，跳过 TC sync")
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="将 markdown 文件同步到 Joplin 笔记（func 通用版）"
@@ -245,10 +223,6 @@ def main():
     parser.add_argument(
         "--find-files", action="store_true",
         help="自动扫描项目目录下的 docs/*.md 和 *.md"
-    )
-    parser.add_argument(
-        "--ssh-sync", action="store_true",
-        help="同步后 SSH 到 TC 触发 joplin sync（仅适用于 TC 环境）"
     )
 
     args = parser.parse_args()
@@ -285,10 +259,6 @@ def main():
             quiet=args.quiet,
             attachments=args.attach,
         )
-
-    # 可选：SSH 到 TC 触发远程 joplin sync
-    if args.ssh_sync:
-        _ssh_tc_joplin_sync(quiet=args.quiet)
 
 
 if __name__ == "__main__":
