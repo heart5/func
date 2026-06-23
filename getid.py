@@ -150,7 +150,11 @@ def getdeviceid() -> None:
         except Exception as e:
             print(f"运行termux专用库出错{e}\n下面尝试用主机名代替")
             try:
-                idstr = execcmd("uname -a")
+                try:
+                    with open("/etc/machine-id") as _f:
+                        idstr = _f.read().strip()
+                except Exception:
+                    idstr = execcmd("uname -a")
                 print(idstr)
                 uid = uuid.uuid3(uuid.NAMESPACE_URL, idstr)
                 # print(uid)
