@@ -77,26 +77,6 @@ def _try_remote(url, token):
     return None
 
 
-def _try_local():
-    """尝试连接本地 Joplin server，成功返回 ClientApi，失败返回 None。"""
-    jpcmdstr = execcmd("joplin config api.token&joplin config api.port")
-    if jpcmdstr.find("=") == -1:
-        return None
-    splitlst = [line.split("=") for line in re.findall(".+=.*", jpcmdstr)]
-    kvdict = dict(
-        [
-            [x.split(".")[-1].strip() if x.split(".")[-1].strip() != "null" else 41184 for x in sonlst]
-            for sonlst in splitlst
-        ]
-    )
-    url = f"http://localhost:{kvdict.get('port')}"
-    status = execcmd("joplin server status")
-    if "Server is running" in status:
-        return ClientApi(token=kvdict.get("token"), url=url)
-    log.warning("本地 Joplin server 有配置但未运行")
-    return None
-
-
 def _validate_uuid(value: str, param_name: str = "parent_id") -> None:
     """校验是否为32位hex UUID，不是则抛 ValueError。"""
     if value and not re.fullmatch(r'[a-f0-9]{32}', value):
@@ -110,8 +90,11 @@ def getapi() -> ClientApi:
     连接策略：
       1. local_server=true 标记本机 → 直连 localhost:41184，免绕公网
       2. 否则走 ini 中 fallback_url
-      3. 无 ini 配置 → 尝试本地 joplin CLI
+      3. 无 ini 配置 → 尝试 fallback_url
       4. 全部失败 → 退出进程
+
+    注意：本机无 Joplin 桌面客户端，不走本地 joplin CLI 路径。
+    详见 https://github.com/laurent22/joplin/issues/9275
     """
     ini_url, ini_token, local_server = _read_remote_config()
     if ini_url and ini_token:
@@ -124,17 +107,10 @@ def getapi() -> ClientApi:
         api = _try_remote(ini_url, ini_token)
         if api is not None:
             return api
-        # fallback_url 不通，再尝试本地 CLI
-        log.warning("远程连接失败，尝试本地 Joplin server...")
-        api = _try_local()
-        if api is not None:
-            return api
+        log.warning("远程 Joplin 连接失败（无本地 CLI 路径）")
     else:
-        # 无 ini 配置 → 本地优先（向后兼容）
-        api = _try_local()
-        if api is not None:
-            return api
-        # 本地不通，尝试远程
+        # 无 ini 配置 → 尝试远程（本地无 Joplin 桌面客户端）
+
         api = _try_remote(ini_url, ini_token) if ini_url and ini_token else None
         if api is not None:
             return api
