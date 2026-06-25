@@ -792,19 +792,15 @@ def modify_resource(res_id: str, imgdata64: str) -> bytes:
 
 # %%
 def getreslst(noteid):
-    """以字典列表的形式返回输入id笔记包含的资源文件，包含id、title和contentb"""
+    """逐条yield笔记包含的资源文件(id, title, contentb)，每yield一条就可释放一条"""
     global jpapi
     dLst = jpapi.get_resources(note_id=noteid)
-    # print(type(dLst), dLst)
-    reslst = []
     for res in dLst.items:
         sond = dict()
         sond["id"] = res.id
         sond["title"] = res.title
         sond["contentb"] = jpapi.get_resource_file(res.id)
-        reslst.append(sond)
-    # print(reslst[0])
-    return reslst
+        yield sond
 
 
 # %% [markdown]
