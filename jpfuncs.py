@@ -58,7 +58,7 @@ def _read_remote_config():
         url = getcfpoptionvalue("joplinai", "joplin", "fallback_url")
         token = getcfpoptionvalue("joplinai", "joplin", "fallback_token")
         local = getcfpoptionvalue("joplinai", "joplin", "local_server")
-        return url, token, local in ("true", "True", "1", "yes")
+        return url, token, local is True or local in ("true", "True", "1", "yes")
     except Exception:
         pass
     return None, None, False
