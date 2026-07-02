@@ -28,16 +28,6 @@ from pathlib import Path
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as pltpp
 
-# 注册中文字体（simhei/msyh 在 Termux 字体目录）
-_font_dir = Path("/data/data/com.termux/files/usr/share/fonts/TTF")
-for _font_name in ["simhei.ttf", "msyh.ttf"]:
-    _font_path = _font_dir / _font_name
-    if _font_path.exists():
-        fm.fontManager.addfont(str(_font_path))
-        fm.FontProperties(fname=str(_font_path))
-pltpp.rcParams["font.sans-serif"] = ["SimHei", "Microsoft YaHei", "HarmonyOS Sans SC", "Noto Sans CJK SC"]
-pltpp.rcParams["axes.unicode_minus"] = False
-
 # %% [markdown]
 # ## 函数库
 
