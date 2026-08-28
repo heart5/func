@@ -23,6 +23,7 @@
 import binascii
 import hashlib
 import os
+import re
 import sqlite3 as lite
 
 # %%
@@ -108,20 +109,63 @@ def write2txt(weathertxtfilename, inputitemlist):
 # ## readfromtxt(weathertxtfilename)
 
 # %%
+def _fix_utf8_tail(raw):
+    """截掉文件尾部不完整的 UTF-8 字节序列（进程被杀时写坏的尾巴）"""
+    for cut in range(0, 4):
+        candidate = raw if cut == 0 else raw[:-cut]
+        try:
+            candidate.decode("utf-8")
+            if cut:
+                return candidate, True
+            return raw, False
+        except UnicodeDecodeError as e:
+            if e.reason != "unexpected end of data":
+                break
+    return raw, False
+
+
+# %%
 def readfromtxt(weathertxtfilename):
     if not os.path.exists(weathertxtfilename):
         touchfilepath2depth(weathertxtfilename)
         write2txt(weathertxtfilename, None)
-    items = []
-    # with open(weathertxtfilename, 'r', encoding='ISO8859-1') as ftxt:
-    with open(weathertxtfilename, "r", encoding="utf-8") as ftxt:
-        items = [line.strip() for line in ftxt]  # strip()，去除行首行尾的空格
-        # for line in ftxt:
-        # try:
-        # items.append(line.strip())
-        # except UnicodeDecodeError as ude:
-        # log.error(f"{line}\n{ude}")
-    return items
+    with open(weathertxtfilename, "rb") as ftxt:
+        raw = ftxt.read()
+    fixed = False
+
+    # 1) 截掉尾部不完整字节（写文件时进程被杀导致）
+    raw, cut = _fix_utf8_tail(raw)
+    if cut:
+        fixed = True
+
+    # 2) 整体 UTF-8 解码；失败按历史拉丁编码问题转回 UTF-8
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            text = raw.decode("latin-1").encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            text = raw.decode("utf-8", errors="replace")
+        fixed = True
+
+    # 3) 双重编码 mojibake 行修复：UTF-8 被当作 latin-1 再编码过的行转回
+    lines = text.split("\n")
+    out_lines = []
+    for ln in lines:
+        try:
+            restored = ln.encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            restored = None
+        if restored and re.search(r"[\u4e00-\u9fff]", restored):
+            ln = restored
+            fixed = True
+        out_lines.append(ln)
+
+    if fixed:
+        write2txt(weathertxtfilename, out_lines)
+        log.info(f"编码自动修复：{weathertxtfilename}")
+
+    return [line.strip() for line in out_lines]  # strip()，去除行首行尾的空格
 
 
 # %% [markdown]
