@@ -1299,14 +1299,23 @@ class JoplinUnreachableError(Exception):
 
 # %%
 class _LazyJoplinAPI:
-    __slots__ = ('_api',)
+    __slots__ = ('_api', '_initializing')
 
     def __init__(self):
         self._api = None
+        self._initializing = False
 
     def _ensure(self):
         if self._api is None:
-            self._api = getapi()
+            if self._initializing:
+                raise JoplinUnreachableError(
+                    "Joplin API 初始化期间被重入调用，已阻止递归"
+                )
+            self._initializing = True
+            try:
+                self._api = getapi()
+            finally:
+                self._initializing = False
         return self._api
 
     def __getattr__(self, name):
@@ -1315,7 +1324,7 @@ class _LazyJoplinAPI:
         return getattr(self._ensure(), name)
 
     def __setattr__(self, name, value):
-        if name == '_api':
+        if name in ('_api', '_initializing'):
             super().__setattr__(name, value)
         else:
             setattr(self._ensure(), name, value)

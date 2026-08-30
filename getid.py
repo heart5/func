@@ -66,7 +66,14 @@ def set_devicename2ini(id: str, sysstr: str) -> None:
 
     if (device_name := getcfpoptionvalue("happyjphard", id, "device_name")) is None:
         log.info(f"设备名称{device_name}为None，可能是尚未设置或从云端获取。")
-        if device_name_fromcloud := getinivaluefromcloud("device", id):
+        # 云端获取失败只告警不抛异常：注册是尽力而为，Joplin API 不可用时
+        # 不能阻塞调用方（否则 getapi 失败路径经 gethostuser 求值时递归）
+        try:
+            device_name_fromcloud = getinivaluefromcloud("device", id)
+        except Exception as e:
+            log.warning(f"从云端获取设备名称失败，跳过注册：{e}")
+            device_name_fromcloud = None
+        if device_name_fromcloud:
             setcfpoptionvalue("happyjphard", id, "device_name", device_name_fromcloud)
         else:
             log.critical(
@@ -188,13 +195,12 @@ def getdeviceid() -> None:
 
 # %%
 def getdevicename() -> str:
-    """获取设备名称.
+    """获取设备名称（纯本地读取，不触发云端注册）.
 
     Returns:
         str: 设备名称
     """
     id = getdeviceid()
-    set_devicename2ini(id, "Linux")
 
     return get_devicenamefromini(id)
 
