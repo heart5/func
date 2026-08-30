@@ -202,7 +202,7 @@ def getdevicename() -> str:
     """
     id = getdeviceid()
 
-    return get_devicenamefromini(id)
+    return get_devicenamefromini(id) or id
 
 
 # %% [markdown]
