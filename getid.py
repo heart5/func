@@ -123,6 +123,8 @@ def getdeviceid() -> None:
         return str(d_id_from_ini)
     id = None
     sysstr = platform.system()
+    if sysstr == "Android":
+        sysstr = "Linux"
     # print(sysstr)
     if sysstr == "Windows":
         c = wmi.WMI()
