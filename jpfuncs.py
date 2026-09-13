@@ -136,10 +136,35 @@ def getapi() -> ClientApi:
 
 
 # %%
+def _find_child_notebook(title: str, parent_id: str) -> Optional[str]:
+    """在指定父笔记本下按全名查找子笔记本，返回id，无匹配返回None"""
+    for nb in jpapi.get_all_notebooks(fields="id,title,parent_id"):
+        if nb.title == title and (nb.parent_id or "") == (parent_id or ""):
+            return nb.id
+    return None
+
+
+# %%
 @timethis
 def searchnotebook(title: str) -> str:
-    """查找指定title（全名）的笔记本并返回id，如果不存在，则新建一个返回id"""
+    """查找指定title（全名）的笔记本并返回id，如果不存在，则新建一个返回id
+
+    title 形如 "ccmd/ops" 时按嵌套路径逐级查找/创建，避免在根级建出字面同名笔记本。
+    """
     global jpapi
+    if "/" in title:
+        parent_id = None
+        nbid = None
+        for part in (p.strip() for p in title.split("/")):
+            if not part:
+                continue
+            nbid = _find_child_notebook(part, parent_id)
+            if nbid is None:
+                nbid = jpapi.add_notebook(title=part, parent_id=parent_id or "")
+                log.critical(f"新建笔记本《{part}》，id为：\t{nbid}")
+            parent_id = nbid
+        return nbid
+
     result = jpapi.search(query=title, type="folder")
     if len(result.items) == 0:
         nbid = jpapi.add_notebook(title=title)
