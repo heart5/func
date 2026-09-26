@@ -20,6 +20,7 @@
 # %%
 import base64
 import hashlib
+import json
 import os
 import re
 import tempfile
@@ -393,6 +394,47 @@ def createresource(filename, title=None):
 
 
 # %% [markdown]
+# ### updateresource(resource_id, filename, title=None)
+
+
+# %%
+def updateresource(resource_id, filename, title=None):
+    """原地替换资源数据，资源 id 保持不变（PUT /resources/:id 带文件）。"""
+    global jpapi
+    with open(filename, "rb") as infile:
+        files = {
+            "data": (json.dumps(filename), infile),
+            "props": (None, json.dumps({"title": title or filename})),
+        }
+        jpapi._request("put", f"/resources/{resource_id}", files=files)
+    log.info(f"资源文件（{resource_id}）原地更新成功：{filename}")
+    return resource_id
+
+
+# %% [markdown]
+# ### upsertresource(old_body, filename, label, title=None)
+
+
+# %%
+def upsertresource(old_body, filename, label, title=None):
+    """按标签在旧正文中定位同一槽位资源：命中则原地更新（id 不变），否则新建。
+
+    命中判定：旧正文中存在 `![label](:/id)` 或 `[label](:/id)`。
+    原地更新失败（资源已被删除等）自动回退为新建，返回最终可用资源 id。
+    """
+    global jpapi
+    if old_body and label:
+        m = re.search(r"!?\[" + re.escape(label) + r"\]\(:/([a-fA-F0-9]{32})\)", old_body)
+        if m:
+            rid = m.group(1)
+            try:
+                return updateresource(rid, filename, title=title)
+            except Exception as e:
+                log.warning(f"资源（{rid}）原地更新失败，改为新建: {e}")
+    return createresource(filename, title=title)
+
+
+# %% [markdown]
 # ### createresourcefromobj(file_obj, title=None)
 
 
@@ -473,6 +515,57 @@ def deleteresourcesfromnote(noteid):
 
 # %% [markdown]
 #
+
+# %% [markdown]
+# ### prune_removed_resources(old_body, new_body, exclude_note_id=None)
+
+
+# %%
+def prune_removed_resources(old_body, new_body, exclude_note_id=None):
+    """删除旧正文引用、新正文不再引用、且无其他笔记引用的资源。
+
+    供报告管线处理异常遗留资源（槽位消失、标签不匹配等），避免累积成孤儿。
+    /resources/:id/notes 索引有分钟级滞后，本笔记自身的旧索引行已由
+    exclude_note_id 排除；更新失败或仍被其他笔记引用的资源均跳过。
+    返回被删除的资源 id 列表。
+    """
+    global jpapi
+    pat = re.compile(r"\(:/([a-fA-F0-9]{32})\)")
+    stale = sorted(set(pat.findall(old_body or "")) - set(pat.findall(new_body or "")))
+    if not stale:
+        return []
+    url, token, _ = _read_remote_config()
+    deleted, kept = [], []
+    for rid in stale:
+        try:
+            jpapi.get_resource(rid)
+        except Exception:
+            continue
+        refs = None
+        if url and token:
+            try:
+                resp = requests.get(f"{url}/resources/{rid}/notes",
+                                    params={"token": token}, timeout=10)
+                items = resp.json().get("items", []) or []
+                refs = [it for it in items if it.get("id") != exclude_note_id]
+            except Exception as e:
+                log.warning(f"查询资源（{rid}）引用失败，跳过删除: {e}")
+        if refs is None:
+            continue
+        if refs:
+            kept.append(rid)
+            log.info(f"旧资源（{rid}）仍被 {len(refs)} 篇其他笔记引用，保留不删")
+            continue
+        try:
+            jpapi.delete_resource(rid)
+            deleted.append(rid)
+            log.info(f"旧资源（{rid}）已无引用，删除成功")
+        except Exception as e:
+            log.warning(f"旧资源（{rid}）删除失败: {e}")
+    if deleted:
+        log.info(f"本轮清理旧资源 {len(deleted)} 个: {deleted}")
+    return deleted
+
 
 # %% [markdown]
 # ### extract_resource_ids_from_note(noteid)
