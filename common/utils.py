@@ -41,7 +41,12 @@ def execute(cmd: List[str], encoding: str = "UTF-8", timeout: Optional[int] = No
         rc = proc.returncode
         return (output, rc, error)
     except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
         return ("", -1, "Command execution timed out")
     except Exception as e:
+        if 'proc' in locals():
+            proc.kill()
+            proc.wait()
         return ("", -1, str(e))
 
