@@ -50,6 +50,7 @@ from urllib3.exceptions import MaxRetryError, NewConnectionError
 import pathmagic
 
 with pathmagic.context():
+    from func.first import getdirmain
     from func.logme import log
     from func.sysfunc import extract_traceback4exception, not_IPython
     from func.termuxtools import termux_sms_send
@@ -292,13 +293,23 @@ def trycounttimes2(servname="服务器", maxtimes=100, maxsecs=50):
 
 
 # %% [markdown]
-# ### ifttt_notify(content="content", funcname="funcname")
+# ### ifttt_event_name() / ifttt_notify(content="content", funcname="funcname")
+
+
+# %%
+def ifttt_event_name() -> str:
+    """事件名 = 运行所在项目名（仓库目录名）；IFTTT 事件名仅允许字母、数字、下划线"""
+    try:
+        name = getdirmain().name.lower()
+    except Exception:
+        name = ""
+    return re.sub(r"[^a-z0-9_]", "_", name) or "unknown_project"
 
 
 # %%
 @trycounttimes2("ifttt服务器")
 def ifttt_notify(content="content", funcname="funcname"):
-    ifttt = IFTTT("0sa6Pl_UJ9a_w6UQlYuDJ", "everwork")
+    ifttt = IFTTT("0sa6Pl_UJ9a_w6UQlYuDJ", ifttt_event_name())
     pu = platform.uname()
     ifttt.notify(f"{pu.machine}_{pu.node}", content, funcname)
     log.critical(f"{pu.machine}_{pu.node}\t{content}\t{funcname}")
