@@ -217,11 +217,11 @@ def convert_intstr_datetime(value):
     if isinstance(value, str):
         try:
             # 将字符串转换为 datetime 对象
-            return arrow.get(value).datetime
+            return arrow.get(value).naive
         except Exception:
             return None  # 如果转换失败，返回 None
     elif isinstance(value, (int, float)):
-        return arrow.get(value).to("Asia/Shanghai").datetime
+        return arrow.get(value).to("Asia/Shanghai").naive
     else:
         return None  # 对于其他类型返回 None
 
@@ -249,6 +249,28 @@ def clean4timecl(name, dbname, confirm):
     )
 
     outdf = df2.drop_duplicates()
+    has_md5 = "content_md5" in df.columns
+    if has_md5:
+        from aimod.chat_hash import content_md5
+
+        outdf = outdf.assign(
+            time=outdf["time"].apply(
+                lambda t: t.strftime("%Y-%m-%d %H:%M:%S") if hasattr(t, "strftime") else str(t)
+            )
+        )
+        outdf = outdf.assign(content_md5=[
+            content_md5(
+                t,
+                None if pd.isna(sd) else int(sd),
+                None if pd.isna(sr) else str(sr),
+                None if pd.isna(tp) else str(tp),
+                None if pd.isna(ct) else str(ct),
+            )
+            for t, sd, sr, tp, ct in zip(
+                outdf["time"], outdf["send"], outdf["sender"], outdf["type"], outdf["content"]
+            )
+        ])
+        outdf = outdf.drop_duplicates(subset=["content_md5"])
     outdf = outdf.sort_values("time")
     log.info(
         f"从数据库【{dbname}】的数据表《wc_{name}》中读出记录总数{df.shape[0]}条，去掉(time经过转换后为空的)后还有{df1.shape[0]}条，去重(文件路径已经转换为相对路径)后还有{outdf.shape[0]}条"
@@ -267,8 +289,11 @@ def clean4timecl(name, dbname, confirm):
             # 清空原数据表
             cursor.execute(f"DELETE FROM wc_{name}")
             # 将临时表的数据插入原数据表
+            insert_cols = "time, send, sender, type, content"
+            if has_md5:
+                insert_cols += ", content_md5"
             cursor.execute(
-                f""" INSERT INTO wc_{name} (time, send, sender, type, content) SELECT time, send, sender, type, content FROM wc_{name}_temp """
+                f""" INSERT INTO wc_{name} ({insert_cols}) SELECT {insert_cols} FROM wc_{name}_temp """
             )
             # 删除临时表
             cursor.execute(f"DROP TABLE wc_{name}_temp")
